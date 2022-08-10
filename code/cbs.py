@@ -249,7 +249,7 @@ class CBSSolver(object):
             
             collision = node['collisions'][0] #take one collision
          
-            constraints = disjoint_splitting(collision)
+            constraints = standard_splitting(collision)
             # print("constraints", constraints)
         
             for constraint in constraints:
