@@ -95,7 +95,9 @@ def disjoint_splitting(collision):
     agents =[collision['a1'], collision['a2']]
     collision_loc = collision['loc']
     time_step = collision['time_step']
-    chosen_agent = random.randint(0,1) #choose one of the colliding agents randomly 
+    # chosen_agent = random.randint(0,1) #choose one of the colliding agents randomly 
+    chosen_agent = 0 #choose one of the colliding agents randomly 
+
     agent = agents[chosen_agent]
     
     #if vertex collision 
@@ -137,10 +139,29 @@ def paths_violate_constraint(paths, constraint):
                 collision = detect_collision(paths[agent], temp_path)
                 if(collision is not None):
                     violated_agentsIds.append(agent)
-                  
+        print("paths ", paths)
+        print("Constraint ", constraint)
+        print("list of agents ", violated_agentsIds)
         return violated_agentsIds
     return []
-
+    # assert constraint['positive'] is True
+    # rst = []
+    # for i in range(len(paths)):
+        # if i == constraint['agent']:
+            # continue
+        # curr = get_location(paths[i], constraint['time_step'])
+        # prev = get_location(paths[i], constraint['time_step'] - 1)
+        # if len(constraint['loc']) == 1:  # vertex constraint
+            # if constraint['loc'][0] == curr:
+                # rst.append(i)
+        # else:  # edge constraint
+            # if constraint['loc'][0] == prev or constraint['loc'][1] == curr \
+                    # or constraint['loc'] == [curr, prev]:
+                # rst.append(i)
+    # print("Paths ", paths)
+    # print("Constrasint = ", constraint)
+    # print("list of agents ", rst)
+    # return rst
 
 class CBSSolver(object):
     """The high-level search of CBS."""
@@ -220,12 +241,16 @@ class CBSSolver(object):
         while (len(self.open_list) > 0):
             
             node = self.pop_node()
-            if (len(node['collisions']) == 0): #if no collisions return paths
+            if (len(node['collisions']) == 0): #if no collisions return paths    
+                print("PAths", node['paths'])
+                print("Sum of costs", node['cost'])
                 return node['paths']
+            
+            
             collision = node['collisions'][0] #take one collision
          
-            constraints = disjoint_splitting (collision)
-           
+            constraints = disjoint_splitting(collision)
+            # print("constraints", constraints)
         
             for constraint in constraints:
                 #create an empty node Q
@@ -233,10 +258,13 @@ class CBSSolver(object):
                     'cost': 0,
                     'constraints': [],
                     'paths': [],
-                    'collisions': []}
-                #Copy all conraitns from the parent node and add additional constraint 
-                Q['constraints'] = node['constraints'].copy()
-                Q['constraints'].append(constraint)
+                    'collisions': []
+                    }
+              
+              
+                #Copy all constraints from the parent node and add additional constraint 
+                Q['constraints'] = node['constraints'].copy()           #deep copy 
+                Q['constraints'].append(constraint)                    
                 Q['paths'] = node['paths'].copy()
                
                 ai = constraint['agent']
@@ -249,14 +277,19 @@ class CBSSolver(object):
                                 agent = ai,
                                 constraints = Q['constraints'])
                 
-                if path is not None:
+                if (path != None):
+                    print("Path is not none")
                     #replace the specified agent's path with the new (containing new constrain)
                     Q['paths'] [ai] = path
 
-                   
+                
                     #check whether paths for other agents have been violated
-                    broken_agents_paths = paths_violate_constraint(Q['paths'], constraint)
+                    broken_agents_paths  = []
+                    #if constraint is positive then check if this constraint violates other agents' plans 
+                    if(constraint['positive'] == True):
+                        broken_agents_paths = paths_violate_constraint(Q['paths'], constraint)    
                     is_path_found = True
+                    
                     if(len(broken_agents_paths) != 0):
                         
                         for agent in broken_agents_paths:
@@ -265,7 +298,9 @@ class CBSSolver(object):
                                                 'agent': agent, 
                                                 'loc': constraint['loc'],
                                                 'time_step': constraint['time_step']}
-                            Q['constraints'].append (constraint_new)
+                            # print("Interating constraint ", constraint['loc'])
+                            # print("constraint = ", constraint_new['loc'])
+                            Q['constraints'].append(constraint_new)
                             
                             #generate new path with new negative constraint
                             updated_path = a_star   (my_map = self.my_map,
@@ -274,18 +309,26 @@ class CBSSolver(object):
                                                     h_values = self.heuristics[agent],
                                                     agent = agent,
                                                     constraints = Q['constraints'])
-                            #break if updated path  doesn't exist
-                            if updated_path is None:
+                            #break if updated path doesn't exist
+                            if (updated_path == None):
                                 is_path_found = False
                                 break
                             #else add the path to high-level node
                             Q['paths'][agent] = updated_path
                     
-                    if(not is_path_found):
-                        continue                    
+                    if(is_path_found == False):
+                        continue        
+
                     Q['collisions'] = detect_collisions(Q['paths'])
                     Q['cost'] = get_sum_of_cost(Q['paths'])
                     self.push_node(Q)
+                else:
+                    print("Constraint", constraint)
+                    print("Q constraints", Q['constraints'])
+                    print("Start",  self.starts[ai])
+                    print("Goal ", self.goals[ai])
+                    print("path is non")
+                
             
         
         raise BaseException("No solutions")

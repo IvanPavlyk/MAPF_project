@@ -4,7 +4,7 @@ from locale import currency
 from numpy import positive
 
 def move(loc, dir):
-    directions = [(0, -1), (1, 0), (0, 1), (-1, 0)]
+    directions = [(0, -1), (1, 0), (0, 1), (-1, 0), (0, 0)]
     return loc[0] + directions[dir][0], loc[1] + directions[dir][1]
 
 
@@ -60,6 +60,7 @@ def build_constraint_table(constraints, agent):
     constraint_table = dict()
     positive_constraint_table = dict()
     # print("constrs", constraints)
+    print("passed constraints \n", constraints)
     for constraint in constraints:
         
         #constructing negative constraints
@@ -112,14 +113,14 @@ def is_constrained(curr_loc, next_loc, next_time, constraint_table):
     if (next_time in constraint_table):                 #if next_time key exists in the constraint_table
         constrained_cells = constraint_table[next_time]  #obtained constrained cells/edges at the given time step
         
-        for constrain in constrained_cells:
+        for constraint in constrained_cells:
             #check vertex constraint 
-            if ( len(constrain) == 1):
-                if(constrain == [next_loc]):
+            if ( len(constraint) == 1):
+                if(constraint == [next_loc]):
                     return True
             #check edge constraint
             else: 
-                if([curr_loc, next_loc] == constrain):        
+                if([curr_loc, next_loc] == constraint):        
                     return True
     return False
    
@@ -141,25 +142,82 @@ def compare_nodes(n1, n2):
 
 
 #Checks if the constraint at the child's node time_step satisfies the list of positive constraints 
-def is_positive_satisfied(parent_node,child_node , positive_constraints):
+def is_positive_satisfied(parent_node, child_node, next_time, positive_constraints):
    
     if(len(positive_constraints) != 0):
        
-        child_time_step = child_node['time_step']
-        # print('child time step', child_time_step)
-        parent_loc = parent_node['loc']
-        child_loc = child_node['loc']
-        if(child_time_step in positive_constraints):
-            constraint = positive_constraints[child_time_step]
+        if(next_time in positive_constraints):
+            constrained_cells = positive_constraints[next_time]
+            for constraint in constrained_cells:
+                if(len(constraint) == 1):
+                    if(constraint != [child_node['loc']]):
+                        return False
+                else:
+                    if([parent_node['loc'], child_node['loc']] != constraint):
+                        return False
+            # child_time_step = child_node['time_step']
+            # parent_time_step = parent_node['time_step']
+            # # print('child time step', child_time_step)
 
+            # parent_loc = parent_node['loc']
+            # child_loc = child_node['loc']
             
-            if(len(constraint[0]) == 1):
-                if(constraint[0] != [child_loc]):
-                    return False
-            else:
+            # if(child_time_step in positive_constraints):
+            #     constraint = positive_constraints[child_time_step]
+            #     if(len(constraint[0]) == 1):
+            #         if(constraint[0] != [child_loc]):
+            #             return False
             
-                if(constraint[0][1] != parent_loc or constraint[0][0] != child_loc): 
-                    return False
+                
+            # if(parent_time_step in positive_constraints):
+            #     constraint = positive_constraints[parent_time_step]
+            #     if(len(constraint[0]) == 2):
+            #         if([parent_loc, child_loc] != constraint):
+            #             return False 
+
+
+        # if (next_time in constraint_table):                 #if next_time key exists in the constraint_table
+        # constrained_cells = constraint_table[next_time]  #obtained constrained cells/edges at the given time step
+        
+        # for constraint in constrained_cells:
+        #     #check vertex constraint 
+        #     if ( len(constraint) == 1):
+        #         if(constraint == [next_loc]):
+        #             return True
+        #     #check edge constraint
+        #     else: 
+        #         if([curr_loc, next_loc] == constraint):        
+        #             return True
+
+        # for timestep in range(len(paths)):
+        #     if(timestep in positive_constraints):
+                
+        #         constraints = positive_constraints[timestep]
+                
+        #         for constraint in constraints:
+        #             print("Const = ", constraint)
+        #             # print("pathsssss =  ", paths[timestep])
+        #             # print("len of const ", len (constraint))
+                
+        #             if(len(constraint) == 1):
+
+        #                 if(paths[timestep] != constraint[0]):
+        #                     return False
+
+        #             else:
+        #                 # print("at else")
+        #                 # print("timestep = ", timestep)
+        #                 # print("len of paths ", len(paths))
+        #                 # print("paths ", paths)
+        #                 # print("constraints ", positive_constraints)
+        #                 if(timestep + 1 < len(paths)):
+        #                     # print("Constr 0 ", constraint[0])
+        #                     # print("Constr 1 ", constraint[1])
+        #                     # print("path at timestep", paths[timestep])
+        #                     # print("path at timesteop +1", paths[timestep + 1])
+        #                     if(constraint[0] != paths[timestep] and constraint[1] != paths[timestep + 1]):
+                                
+        #                         return False
 
     return True 
 
@@ -182,10 +240,17 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
     
     #Task 1.2, create constraint table beforeurr['loc'], child_loc, curr['time_step'] + 1,constraint_table generating root node
     [constraint_table, positive_table] = build_constraint_table(constraints = constraints, agent = agent) 
-   
-    root = {'loc': start_loc, 'g_val': 0, 'h_val': h_value, 'parent': None, 'time_step' : 0}    #added new key/value pair for time steps
+    
+
+    print("COnstraints TALBE", constraint_table)
+    print("Pos TALBE", positive_table)
+
+    #added new key/value pair for time steps   
+    root = {'loc': start_loc, 'g_val': 0, 'h_val': h_value, 'parent': None, 'time_step' : 0}   
     push_node(open_list, root)
-    closed_list[(root['loc'], root['time_step'])] = root                                      #now closed list is indexed by a cell and time step tuple
+
+    #now closed list is indexed by a cell and time step tuple
+    closed_list[(root['loc'], root['time_step'])] = root                                      
     
 
 
@@ -197,28 +262,30 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
     
     while len(open_list) > 0:
         curr = pop_node(open_list)
-       
+        # print(curr)
         #############################
         # Task 1.4: Adjust the goal test condition to handle goal constraints
         if curr['loc'] == goal_loc and curr['time_step'] >= earliest_goal_timestep:
+            print("agent num", agent)
+            print("path by a*", get_path(curr))
+            print("Constraints pos", positive_table)
+            print("Constraints neg", constraint_table)
+            
             return get_path(curr)
        
                 
         #expanding current node
-        for dir in range(4):
-            
+        for dir in range(5):
+   
+       
             child_loc = move(curr['loc'], dir)
-            
+        
             #Check if the child_loc position is not out of the maps' bounds
             if (child_loc[0] < 0 or child_loc[1] < 0 or child_loc[0] >= len(my_map) or child_loc[1] >= len(my_map[0])): 
                 continue
-            
+           
             #checks if the child_loc in the map is not blocked
             if my_map[child_loc[0]][child_loc[1]]:     
-                continue
-            
-            #Task 1.2, check if new node satisfies the passed  constraints, if doesn't -> prune
-            if (is_constrained(curr['loc'], child_loc, curr['time_step'] + 1,constraint_table)):
                 continue
             
             #generating a child node
@@ -227,8 +294,19 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
                     'h_val': h_values[child_loc],
                     'parent': curr,
                     'time_step': curr['time_step'] + 1}
-            if (is_positive_satisfied(curr, child, positive_table) == False):
+            if (is_positive_satisfied(parent_node = curr, child_node = child,next_time= curr['time_step'] + 1, positive_constraints = positive_table) == False):
+                    # print("Parent = ", curr)
+                    # print("Child = ", child)
+                    # print("Constraints = ", positive_table)
+                    # print("Positive not satisfied")
                     continue
+            
+
+            #Task 1.2, check if new node satisfies the passed  constraints, if doesn't -> prune
+            if (is_constrained(curr['loc'], child_loc, curr['time_step'] + 1, constraint_table)):
+                continue
+            
+            
             if (child['loc'], child['time_step']) in closed_list:
                 existing_node = closed_list[(child['loc'], child['time_step'])]
                 if compare_nodes(child, existing_node):
