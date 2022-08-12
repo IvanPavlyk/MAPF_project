@@ -60,7 +60,7 @@ def build_constraint_table(constraints, agent):
     constraint_table = dict()
     positive_constraint_table = dict()
     # print("constrs", constraints)
-    print("passed constraints \n", constraints)
+    # print("passed constraints \n", constraints)
     for constraint in constraints:
         
         #constructing negative constraints
@@ -110,8 +110,8 @@ def is_constrained(curr_loc, next_loc, next_time, constraint_table):
     #               any given constraint. For efficiency the constraints are indexed in a constraint_table
     #               by time step, see build_constraint_table.
     
-    if (next_time in constraint_table):                 #if next_time key exists in the constraint_table
-        constrained_cells = constraint_table[next_time]  #obtained constrained cells/edges at the given time step
+    if (next_time in constraint_table):                     #if next_time key exists in the constraint_table
+        constrained_cells = constraint_table[next_time]     #obtained constrained cells/edges at the given time step
         
         for constraint in constrained_cells:
             #check vertex constraint 
@@ -145,7 +145,7 @@ def compare_nodes(n1, n2):
 def is_positive_satisfied(parent_node, child_node, next_time, positive_constraints):
    
     if(len(positive_constraints) != 0):
-       
+      
         if(next_time in positive_constraints):
             constrained_cells = positive_constraints[next_time]
             for constraint in constrained_cells:
@@ -153,8 +153,16 @@ def is_positive_satisfied(parent_node, child_node, next_time, positive_constrain
                     if(constraint != [child_node['loc']]):
                         return False
                 else:
-                    if([parent_node['loc'], child_node['loc']] != constraint):
+                    # print("parent loc", parent_node['loc'])
+                    # print("child_loc", child_node['loc'])
+                    # print("constraint at index 0", constraint[0])
+                    # print("constraint at index 1", constraint[1])
+                    if( (parent_node['loc'] != constraint[1]) or (child_node['loc']!=constraint[0])):
                         return False
+
+
+
+        
             # child_time_step = child_node['time_step']
             # parent_time_step = parent_node['time_step']
             # # print('child time step', child_time_step)
@@ -242,8 +250,8 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
     [constraint_table, positive_table] = build_constraint_table(constraints = constraints, agent = agent) 
     
 
-    print("COnstraints TALBE", constraint_table)
-    print("Pos TALBE", positive_table)
+    # print("COnstraints TALBE", constraint_table)
+    # print("Pos TALBE", positive_table)
 
     #added new key/value pair for time steps   
     root = {'loc': start_loc, 'g_val': 0, 'h_val': h_value, 'parent': None, 'time_step' : 0}   
@@ -262,14 +270,15 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
     
     while len(open_list) > 0:
         curr = pop_node(open_list)
+        print("Curr", curr)
         # print(curr)
         #############################
         # Task 1.4: Adjust the goal test condition to handle goal constraints
         if curr['loc'] == goal_loc and curr['time_step'] >= earliest_goal_timestep:
-            print("agent num", agent)
-            print("path by a*", get_path(curr))
-            print("Constraints pos", positive_table)
-            print("Constraints neg", constraint_table)
+            # print("agent num", agent)
+            # print("path by a*", get_path(curr))
+            # print("Constraints pos", positive_table)
+            # print("Constraints neg", constraint_table)
             
             return get_path(curr)
        
@@ -294,7 +303,7 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
                     'h_val': h_values[child_loc],
                     'parent': curr,
                     'time_step': curr['time_step'] + 1}
-            if (is_positive_satisfied(parent_node = curr, child_node = child,next_time= curr['time_step'] + 1, positive_constraints = positive_table) == False):
+            if (is_positive_satisfied(parent_node = curr, child_node = child, next_time = curr['time_step'] + 1, positive_constraints = positive_table) == False):
                     # print("Parent = ", curr)
                     # print("Child = ", child)
                     # print("Constraints = ", positive_table)

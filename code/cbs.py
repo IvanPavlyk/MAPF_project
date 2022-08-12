@@ -120,48 +120,49 @@ def disjoint_splitting(collision):
 #Gives a list of agent ids that violate passed positive constraint from given list of paths
 def paths_violate_constraint(paths, constraint):
     
-    if (constraint['positive']): 
-        violated_agentsIds = list()
-        agents_num = len(paths) 
+    # if (constraint['positive']): 
+    #     violated_agentsIds = list()
+    #     agents_num = len(paths) 
         
-        for agent in range (agents_num): 
-            if (agent != constraint['agent']):
-                #build a pseudo path with the passed constrain 
-                temp_path = [None] * (constraint['time_step'] + 1)
+    #     for agent in range (agents_num): 
+    #         if (agent != constraint['agent']):
+    #             #build a pseudo path with the passed constrain 
+    #             temp_path = [None] * (constraint['time_step'] + 1)
    
-                if (len(constraint['loc']) == 1):
-                    temp_path[constraint['time_step']] = constraint['loc'][0]
-                else:
-                    temp_path[constraint['time_step'] - 1] = constraint['loc'][0]
-                    temp_path[constraint['time_step']] = constraint['loc'][1]
+    #             if (len(constraint['loc']) == 1):
+    #                 temp_path[constraint['time_step']] = constraint['loc'][0]
+    #             else:
+    #                 temp_path[constraint['time_step'] - 1] = constraint['loc'][0]
+    #                 temp_path[constraint['time_step']] = constraint['loc'][1]
                 
-                #detect collisions with the pseudo constructed path
-                collision = detect_collision(paths[agent], temp_path)
-                if(collision is not None):
-                    violated_agentsIds.append(agent)
-        print("paths ", paths)
-        print("Constraint ", constraint)
-        print("list of agents ", violated_agentsIds)
-        return violated_agentsIds
-    return []
-    # assert constraint['positive'] is True
-    # rst = []
-    # for i in range(len(paths)):
-        # if i == constraint['agent']:
-            # continue
-        # curr = get_location(paths[i], constraint['time_step'])
-        # prev = get_location(paths[i], constraint['time_step'] - 1)
-        # if len(constraint['loc']) == 1:  # vertex constraint
-            # if constraint['loc'][0] == curr:
-                # rst.append(i)
-        # else:  # edge constraint
-            # if constraint['loc'][0] == prev or constraint['loc'][1] == curr \
-                    # or constraint['loc'] == [curr, prev]:
-                # rst.append(i)
+    #             #detect collisions with the pseudo constructed path
+    #             collision = detect_collision(paths[agent], temp_path)
+    #             if(collision is not None):
+    #                 violated_agentsIds.append(agent)
+    #     print("paths ", paths)
+    #     print("Constraint ", constraint)
+    #     print("list of agents ", violated_agentsIds)
+    #     return violated_agentsIds
+    # return []
+    
+    assert constraint['positive'] is True
+    rst = []
+    for i in range(len(paths)):
+        if i == constraint['agent']:
+            continue
+        curr = get_location(paths[i], constraint['time_step'])
+        prev = get_location(paths[i], constraint['time_step'] - 1)
+        if len(constraint['loc']) == 1:  # vertex constraint
+            if constraint['loc'][0] == curr:
+                rst.append(i)
+        else:  # edge constraint
+            if constraint['loc'][0] == prev or constraint['loc'][1] == curr \
+                    or constraint['loc'] == [curr, prev]:
+                rst.append(i)
     # print("Paths ", paths)
     # print("Constrasint = ", constraint)
     # print("list of agents ", rst)
-    # return rst
+    return rst
 
 class CBSSolver(object):
     """The high-level search of CBS."""
@@ -249,7 +250,7 @@ class CBSSolver(object):
             
             collision = node['collisions'][0] #take one collision
          
-            constraints = standard_splitting(collision)
+            constraints = disjoint_splitting(collision)
             # print("constraints", constraints)
         
             for constraint in constraints:
@@ -278,7 +279,7 @@ class CBSSolver(object):
                                 constraints = Q['constraints'])
                 
                 if (path != None):
-                    print("Path is not none")
+                    # print("Path is not none")
                     #replace the specified agent's path with the new (containing new constrain)
                     Q['paths'] [ai] = path
 
