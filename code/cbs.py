@@ -2,6 +2,7 @@ from dis import dis
 import time as timer
 import heapq
 import random
+from queue import Queue
 from single_agent_planner import compute_heuristics, a_star, get_location, get_sum_of_cost, pop_node, push_node
 
 
@@ -189,17 +190,247 @@ class CBSSolver(object):
             self.heuristics.append(compute_heuristics(my_map, goal))
 
     def push_node(self, node):
-        heapq.heappush(self.open_list, (node['cost'], len(node['collisions']), self.num_of_generated, node))
+        heapq.heappush(self.open_list, (node['cost'] + node['h_value'], len(node['collisions']), self.num_of_generated, node['h_value'], node))
         print("Generate node {}".format(self.num_of_generated))
         self.num_of_generated += 1
 
     def pop_node(self):
-        _, _, id, node = heapq.heappop(self.open_list)
+        _, _, _, id, node = heapq.heappop(self.open_list)
         print("Expand node {}".format(id))
         self.num_of_expanded += 1
         return node
-    
 
+    def computeInformedHeuristics(self, collisions, curr, parent, heuristicType):
+        # create conflict graph
+        num_of_CGedges = None
+        HG = [0]*(self.num_of_agents * self.num_of_agents)   # heuristic graph
+        h = -1
+        if heuristicType == 0:
+            h = 0
+        elif heuristicType == 1: #CG
+            CG, num_of_CGedges = self.buildCardinalConflictGraph(collisions, HG, self.build_mdd(curr['paths']))
+            # Minimum Vertex Cover
+            if parent is None:  # when we are allowed
+                # to replan for multiple agents, the incremental method is not correct any longer.
+                h = self.minimumVertexCoverHelper(HG)
+            else:
+                assert len(curr['paths']) == 1
+                h = self.minimumVertexCover(HG, parent['h_value'], self.num_of_agents, num_of_CGedges)
+        #elif heuristicType == 2: #DG
+        #    if not buildDependenceGraph(curr, HG, num_of_CGedges):
+        #        return False
+        #    # Minimum Vertex Cover
+        #    if curr.parent is None:  # when we are allowed to replan for multiple agents, the incremental method is not correct any longer.
+        #        h = minimumVertexCover(HG)
+        #    else:
+        #        h = minimumVertexCover(HG, curr.parent.h_val, num_of_agents, num_of_CGedges)
+        #elif heuristicType == 3: #WDG
+        #    if not buildWeightedDependencyGraph(curr, HG):
+        #        return False
+        #    h = minimumWeightedVertexCover(HG)
+        if h < 0:
+            return False, 0
+        return True, max(h, curr['h_value'])
+
+    def buildCardinalConflictGraph(self, collisions, CG, mdds):
+        num_of_CGedges = 0
+        for collision in collisions:
+            print("a2 ", collision['a2'])
+            print("mdds ", mdds)
+            if self.is_cardinal_conflict(collision, mdds) == 'cardinal':
+                a1 = collision['a1']
+                a2 = collision['a2']
+                if CG[a1 * self.num_of_agents + a2] == 0:
+                    CG[a1 * self.num_of_agents + a2] = 1
+                    CG[a2 * self.num_of_agents + a1] = 1
+                    num_of_CGedges += 1
+        return CG, num_of_CGedges
+
+    def minimumVertexCoverHelper(self, CG):
+        rst = 0
+        done = [False] * self.num_of_agents
+        i = 0
+        while i < self.num_of_agents:
+            if done[i]:
+                continue
+            indices = []
+            Q = Queue()
+            Q.put(i)
+            done[i] = True
+            while not Q.empty():
+                j = Q.get()
+                #Q.pop()
+                indices.append(j)
+                k = 0
+                while k < self.num_of_agents:
+                    if CG[j * self.num_of_agents + k] > 0:
+                        if not done[k]:
+                            Q.put(k)
+                            done[k] = True
+                    elif CG[k * self.num_of_agents + j] > 0:
+                        if not done[k]:
+                            Q.put(k)
+                            done[k] = True
+                    k += 1
+            if len(indices) == 1:  # one node -> no edges -> mvc = 0
+                continue
+            elif len(indices) == 2:  # two nodes -> only one edge -> mvc = 1
+                rst += 1  # add edge weight
+                continue
+
+            subgraph = [0] * (len(indices) * len(indices))
+            num_edges = 0
+            j = 0
+            while j < len(indices):
+                k = j + 1
+                while k < len(indices):
+                    subgraph[j * len(indices) + k] = CG[indices[j] * self.num_of_agents + indices[k]]
+                    subgraph[k * len(indices) + j] = CG[indices[k] * self.num_of_agents + indices[j]]
+                    if subgraph[j * len(indices) + k] > 0:
+                        num_edges += 1
+                    k += 1
+                j += 1
+            if len(indices) > 8:
+                rst += self.greedyMatching(subgraph, len(indices))
+            else:
+                i = 1
+                while i < len(indices):
+                    if self.KVertexCover(subgraph, len(indices), num_edges, i, len(indices)):
+                        rst += i
+                        break
+                    i += 1
+            i += 1
+        return rst
+
+    def minimumVertexCover(self, CG, old_mvc, cols, num_of_CGedges):
+        assert old_mvc >= 0
+        rst = 0
+        if num_of_CGedges < 2:
+            return num_of_CGedges
+        # Compute #CG nodes that have edges
+        num_of_CGnodes = 0
+        for i in range(0, cols):
+            for j in range(0, cols):
+                if CG[i * cols + j] > 0:
+                    num_of_CGnodes += 1
+                    break
+        if num_of_CGnodes > 8:
+            return self.minimumVertexCover(CG)
+        else:
+            if self.KVertexCover(CG, num_of_CGnodes, num_of_CGedges, old_mvc - 1, cols):
+                rst = old_mvc - 1
+            elif self.KVertexCover(CG, num_of_CGnodes, num_of_CGedges, old_mvc, cols):
+                rst = old_mvc
+            else:
+                rst = old_mvc + 1
+        return rst
+
+    def greedyMatching(self, CG, cols):
+        rst = 0
+        used = [False] * cols
+        while True:
+            maxWeight = 0
+            ep1 = None
+            ep2 = None
+            for i in range(0, cols):
+                if used[i]:
+                    continue
+                for j in range(i + 1, cols):
+                    if used[j]:
+                        continue
+                    elif maxWeight < CG[i * cols + j]:
+                        maxWeight = CG[i * cols + j]
+                        ep1 = i
+                        ep2 = j
+            if maxWeight == 0:
+                return rst
+            rst += maxWeight
+            used[ep1] = True
+            used[ep2] = True
+
+    def KVertexCover(self, CG, num_of_CGnodes, num_of_CGedges, k, cols):
+        if num_of_CGedges == 0:
+            return True
+        elif num_of_CGedges > k * num_of_CGnodes - k:
+            return False
+        node = [0 for _ in range(2)]
+        flag = True
+        i = 0
+        while i < cols - 1 and flag:  # to find an edge
+            j = i + 1
+            while j < cols and flag:
+                if CG[i * cols + j] > 0:
+                    node[0] = i
+                    node[1] = j
+                    flag = False
+                j += 1
+            i += 1
+        for i in range(0, 2):
+            CG_copy = CG.copy()
+            #CG_copy.assign(CG.cbegin(), CG.cend())
+            num_of_CGedges_copy = num_of_CGedges
+            for j in range(0, cols):
+                if CG_copy[node[i] * cols + j] > 0:
+                    CG_copy[node[i] * cols + j] = 0
+                    CG_copy[j * cols + node[i]] = 0
+                    num_of_CGedges_copy -= 1
+            if self.KVertexCover(CG_copy, num_of_CGnodes - 1, num_of_CGedges_copy, k - 1, cols):
+                return True
+        return False
+
+    def is_cardinal_conflict(self, collision, mdds):
+        a1 = collision['a1']
+        a2 = collision['a2']
+        t = collision['time_step']
+        loc = collision['loc']
+        mdd1 = mdds[a1]
+        mdd2 = mdds[a2]
+
+        # vertex conflict
+        # The collision is derived from path, and path is derived from mdd. Hence the conflict location is guaranteed in both mdd1 and mdd2 at timestep t.
+        # We only need to check if there is only one node in mdd1 and mdd2 at timestep t
+        if len(loc) == 1:
+            if len(self.get_mdd_nodes(mdd1, t)) == len(self.get_mdd_nodes(mdd2, t)) == 1:
+                return True
+        # edge conflict
+        if len(loc) == 2:  # timestep t > 0 is guaranteed
+            if len(self.get_mdd_nodes(mdd1, t - 1)) == len(self.get_mdd_nodes(mdd1, t)) == len(self.get_mdd_nodes(mdd2, t - 1)) == len(
+                    self.get_mdd_nodes(mdd2, t)) == 1:
+                return True
+        return False
+
+    def get_mdd_nodes(self, mdd, time):
+        if time < 0:
+            return mdd[0]
+        elif time < len(mdd):
+            return mdd[time]
+        else:
+            return mdd[-1]
+
+    def build_mdd(self, paths):
+        path_len = len(paths[0])
+        i= 0
+        for path in paths:
+            print("path ",i, " ", path)
+            i += 1
+        print("path_len ", path_len)
+        print("paths length", len(paths))
+        mdd = []
+
+        for ts in range(path_len):
+            locs = [p[ts] for p in paths]
+            locs_set = set(locs)
+            matchings = {
+                l: [i for i, x in enumerate(locs) if x == l] for l in locs_set
+            }
+            mdd_ts = [{
+                'loc': l,
+                'child': list(set([paths[i][ts + 1] for i in matchings[l]])) if ts != path_len - 1 else [None]
+            } for l in locs_set]
+
+            mdd.append(mdd_ts)
+
+        return mdd
 
     def find_solution(self, disjoint=True):
         """ Finds paths for all agents from their start locations to their goal locations
@@ -217,7 +448,8 @@ class CBSSolver(object):
         root = {'cost': 0,
                 'constraints': [],
                 'paths': [],
-                'collisions': []}
+                'collisions': [],
+                'h_value': 0}
         for i in range(self.num_of_agents):  # Find initial path for each agent
             path = a_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
                           i, root['constraints'])
@@ -227,6 +459,9 @@ class CBSSolver(object):
             root['paths'].append(path)
         root['cost'] = get_sum_of_cost(root['paths'])
         root['collisions'] = detect_collisions(root['paths'])
+        success, root['h_value'] = self.computeInformedHeuristics(root['collisions'], root, root, 1)
+        if not success:
+            print("h < 0")
         self.push_node(root)
        
 
@@ -258,13 +493,12 @@ class CBSSolver(object):
                     'cost': 0,
                     'constraints': [],
                     'paths': [],
-                    'collisions': []
+                    'collisions': [],
+                    'h_value': 0
                     }
-              
-              
                 #Copy all constraints from the parent node and add additional constraint 
-                Q['constraints'] = node['constraints'].copy()           #deep copy 
-                Q['constraints'].append(constraint)                    
+                Q['constraints'] = node['constraints'].copy()           #deep copy
+                Q['constraints'].append(constraint)
                 Q['paths'] = node['paths'].copy()
                
                 ai = constraint['agent']
@@ -321,6 +555,9 @@ class CBSSolver(object):
 
                     Q['collisions'] = detect_collisions(Q['paths'])
                     Q['cost'] = get_sum_of_cost(Q['paths'])
+                    success, Q['h_value'] = self.computeInformedHeuristics(Q['collisions'], Q, node, 1)
+                    if not success:
+                        print("h < 0")
                     self.push_node(Q)
                 else:
                     print("Constraint", constraint)
