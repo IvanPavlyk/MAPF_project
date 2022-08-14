@@ -1,5 +1,6 @@
 import heapq
 from locale import currency
+import time as timer
 
 from numpy import positive
 
@@ -219,7 +220,32 @@ def is_positive_satisfied(parent_node, child_node, next_time, positive_constrain
                                 
         #                         return False
 
-    return True 
+    return True
+
+def build_mdd(paths):
+    path_len = len(paths[0])
+    i= 0
+    for path in paths:
+        print("path ",i, " ", path)
+        i += 1
+    print("path_len ", path_len)
+    print("paths length", len(paths))
+    mdd = []
+
+    #???????????path_len???????????instead of path_len+1
+    for ts in range(path_len):
+        locs = [p[ts] for p in paths]
+        locs_set = set(locs)
+        matchings = {
+            l: [i for i, x in enumerate(locs) if x == l] for l in locs_set
+        }
+        mdd_ts = [{
+            'loc': l,
+            'child': list(set([paths[i][ts + 1] for i in matchings[l]])) if ts != path_len - 1 else [None]
+        } for l in locs_set]
+
+        mdd.append(mdd_ts)
+    return mdd
 
 def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
     """ my_map      - binary obstacle map
@@ -233,7 +259,11 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
     # Task 1.1: Extend the A* search to search in the space-time domain
     #           rather than space domain, only.
 
+    TIME_LIMIT = 0.1
     open_list = []
+    paths = []
+    optimal_path = None
+    optimal_len = -1
     closed_list = dict()
     earliest_goal_timestep = 0
     h_value = h_values[start_loc]
@@ -259,19 +289,31 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
     if(len(constraint_table) != 0):
         earliest_goal_timestep = (max(constraint_table.keys()))
     #if doesn't constraint table for agent is empty, then the earliest is 0
-    
+
+    start_time = timer.time()
     while len(open_list) > 0:
         curr = pop_node(open_list)
+        path = get_path(curr)
         # print(curr)
         #############################
         # Task 1.4: Adjust the goal test condition to handle goal constraints
         if curr['loc'] == goal_loc and curr['time_step'] >= earliest_goal_timestep:
-            print("agent num", agent)
-            print("path by a*", get_path(curr))
-            print("Constraints pos", positive_table)
-            print("Constraints neg", constraint_table)
-            
-            return get_path(curr)
+            if optimal_len == -1:
+                optimal_path = path
+                optimal_len = len(path)
+            if len(path) > optimal_len:
+                break
+            paths.append(path)
+            if timer.time() - start_time > TIME_LIMIT:
+                break
+            continue
+
+            #print("agent num", agent)
+            #print("path by a*", get_path(curr))
+            #print("Constraints pos", positive_table)
+            #print("Constraints neg", constraint_table)
+
+            #return get_path(curr)
        
                 
         #expanding current node
@@ -318,5 +360,7 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
 
                 closed_list[(child['loc'], child['time_step'])] = child
                 push_node(open_list, child)
+    if paths:
+        return optimal_path, build_mdd(paths)
 
-    return None  # Failed to find solutions
+    return None, None  # Failed to find solutions

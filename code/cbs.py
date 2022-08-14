@@ -208,13 +208,13 @@ class CBSSolver(object):
         if heuristicType == 0:
             h = 0
         elif heuristicType == 1: #CG
-            CG, num_of_CGedges = self.buildCardinalConflictGraph(collisions, HG, self.build_mdd(curr['paths']))
+            CG, num_of_CGedges = self.buildCardinalConflictGraph(collisions, HG, curr['mdds'])
             # Minimum Vertex Cover
             if parent is None:  # when we are allowed
                 # to replan for multiple agents, the incremental method is not correct any longer.
                 h = self.minimumVertexCoverHelper(HG)
             else:
-                assert len(curr['paths']) == 1
+                #assert len(curr['paths']) == 1
                 h = self.minimumVertexCover(HG, parent['h_value'], self.num_of_agents, num_of_CGedges)
         #elif heuristicType == 2: #DG
         #    if not buildDependenceGraph(curr, HG, num_of_CGedges):
@@ -237,6 +237,7 @@ class CBSSolver(object):
         for collision in collisions:
             print("a2 ", collision['a2'])
             print("mdds ", mdds)
+            print("mdds length", len(mdds))
             if self.is_cardinal_conflict(collision, mdds) == 'cardinal':
                 a1 = collision['a1']
                 a2 = collision['a2']
@@ -417,6 +418,7 @@ class CBSSolver(object):
         print("paths length", len(paths))
         mdd = []
 
+        #???????????path_len???????????instead of path_len+1
         for ts in range(path_len):
             locs = [p[ts] for p in paths]
             locs_set = set(locs)
@@ -432,7 +434,7 @@ class CBSSolver(object):
 
         return mdd
 
-    def find_solution(self, disjoint=True):
+    def find_solution(self, disjoint=True, h=0):
         """ Finds paths for all agents from their start locations to their goal locations
 
         disjoint    - use disjoint splitting or not
@@ -449,17 +451,19 @@ class CBSSolver(object):
                 'constraints': [],
                 'paths': [],
                 'collisions': [],
-                'h_value': 0}
+                'h_value': 0,
+                'mdds': []}
         for i in range(self.num_of_agents):  # Find initial path for each agent
-            path = a_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
+            path, mddi = a_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
                           i, root['constraints'])
+            root['mdds'].append(mddi)
          
             if path is None:
                 raise BaseException('No solutions')
             root['paths'].append(path)
         root['cost'] = get_sum_of_cost(root['paths'])
         root['collisions'] = detect_collisions(root['paths'])
-        success, root['h_value'] = self.computeInformedHeuristics(root['collisions'], root, root, 1)
+        success, root['h_value'] = self.computeInformedHeuristics(root['collisions'], root, root, h)
         if not success:
             print("h < 0")
         self.push_node(root)
@@ -477,8 +481,9 @@ class CBSSolver(object):
             
             node = self.pop_node()
             if (len(node['collisions']) == 0): #if no collisions return paths    
-                print("PAths", node['paths'])
-                print("Sum of costs", node['cost'])
+                #print("PAths", node['paths'])
+                #print("Sum of costs", node['cost'])
+                self.print_results(node)
                 return node['paths']
             
             
@@ -494,7 +499,8 @@ class CBSSolver(object):
                     'constraints': [],
                     'paths': [],
                     'collisions': [],
-                    'h_value': 0
+                    'h_value': 0,
+                    'mdds': node['mdds'].copy()
                     }
                 #Copy all constraints from the parent node and add additional constraint 
                 Q['constraints'] = node['constraints'].copy()           #deep copy
@@ -504,7 +510,7 @@ class CBSSolver(object):
                 ai = constraint['agent']
                 
                 #build new path with the new constraint 
-                path = a_star(  my_map = self.my_map,
+                path, mddi = a_star(  my_map = self.my_map,
                                 start_loc = self.starts[ai], 
                                 goal_loc = self.goals[ai], 
                                 h_values = self.heuristics[ai],
@@ -515,6 +521,7 @@ class CBSSolver(object):
                     print("Path is not none")
                     #replace the specified agent's path with the new (containing new constrain)
                     Q['paths'] [ai] = path
+                    Q['mdds'][ai] = mddi
 
                 
                     #check whether paths for other agents have been violated
@@ -537,7 +544,7 @@ class CBSSolver(object):
                             Q['constraints'].append(constraint_new)
                             
                             #generate new path with new negative constraint
-                            updated_path = a_star   (my_map = self.my_map,
+                            updated_path, mddi = a_star   (my_map = self.my_map,
                                                     start_loc = self.starts[agent], 
                                                     goal_loc = self.goals[agent], 
                                                     h_values = self.heuristics[agent],
@@ -549,13 +556,14 @@ class CBSSolver(object):
                                 break
                             #else add the path to high-level node
                             Q['paths'][agent] = updated_path
+                            Q['mdds'][agent] = mddi
                     
                     if(is_path_found == False):
                         continue        
 
                     Q['collisions'] = detect_collisions(Q['paths'])
                     Q['cost'] = get_sum_of_cost(Q['paths'])
-                    success, Q['h_value'] = self.computeInformedHeuristics(Q['collisions'], Q, node, 1)
+                    success, Q['h_value'] = self.computeInformedHeuristics(Q['collisions'], Q, node, h)
                     if not success:
                         print("h < 0")
                     self.push_node(Q)
