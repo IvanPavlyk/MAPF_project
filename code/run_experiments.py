@@ -4,6 +4,7 @@ import glob
 from pathlib import Path
 from cbs import CBSSolver
 from cbs import ICBSSolver
+from cbs import ICBSWithHeuristicsSolver
 from independent import IndependentSolver
 from prioritized import PrioritizedPlanningSolver
 from visualize import Animation
@@ -102,6 +103,10 @@ if __name__ == '__main__':
             print("***Run ICBS***")
             icbs =  ICBSSolver(my_map, starts, goals)
             paths = icbs.find_solution(args.disjoint)
+        elif args.solver == "ICBSWithHeuristics":
+            print("***Run ICBS with Heuristics***")
+            icbsWithHeuristics =  ICBSWithHeuristicsSolver(my_map, starts, goals)
+            paths = icbsWithHeuristics.find_solution(args.disjoint, args.h)
         elif args.solver == "Independent":
             print("***Run Independent***")
             solver = IndependentSolver(my_map, starts, goals)
