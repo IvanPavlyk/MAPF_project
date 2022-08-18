@@ -78,6 +78,8 @@ if __name__ == '__main__':
                         help='Use batch output instead of animation')
     parser.add_argument('--disjoint', action='store_true', default=False,
                         help='Use the disjoint splitting')
+    parser.add_argument('--h', type=int, default=0,
+                        help='The heuristic to use (one of: {none,cg,dg,wdg}), defaults to none')
     parser.add_argument('--solver', type=str, default=SOLVER,
                         help='The solver to use (one of: {CBS,Independent,Prioritized}), defaults to ' + str(SOLVER))
 

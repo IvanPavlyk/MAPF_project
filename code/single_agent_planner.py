@@ -178,7 +178,11 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints, isMDD=Fals
     """
    
 
+    TIME_LIMIT = 0.1
     open_list = []
+    paths = []
+    optimal_path = None
+    optimal_len = -1
     closed_list = dict()
     h_value = h_values[start_loc]
     
