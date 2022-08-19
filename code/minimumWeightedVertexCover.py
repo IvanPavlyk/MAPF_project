@@ -67,7 +67,7 @@ def weightedVertexCover(CG, num_of_agents):
 def DPForWMVC(x, i, sum_costs, CG, range_list, best_so_far):
     if sum_costs >= best_so_far:
         return MAX_COST
-    elif i == int(len(x)):
+    elif i == len(x):
         best_so_far = sum_costs
         return sum_costs
     elif range_list[i] == 0: # vertex i does not have any edges.
