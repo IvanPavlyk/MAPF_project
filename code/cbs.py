@@ -347,16 +347,13 @@ class CBSSolverIvan(object):
     def buildCardinalConflictGraph(self, collisions, CG, mdds):
         num_of_CGedges = 0
         for collision in collisions:
-            #print("a2 ", collision['a2'])
-            #print("mdds ", mdds)
-            #print("mdds length", len(mdds))
-            #if self.is_cardinal_conflict(collision, mdds) == 'cardinal':
+          
             a1 = collision['a1']
             a2 = collision['a2']
             mdd1 = mdds[a1]
             mdd2 = mdds[a2]
-            if self.doesContainCardinalConflict(mdd1, mdd2):
-                print('here is cardinal conflict')
+            if(self.doesContainCardinalConflict(mdd1, mdd2)):
+
                 if CG[a1 * self.num_of_agents + a2] == 0:
                     CG[a1 * self.num_of_agents + a2] = 1
                     CG[a2 * self.num_of_agents + a1] = 1
@@ -372,12 +369,7 @@ class CBSSolverIvan(object):
             list1 = levels1[i]
             list2 = levels2[i]
             if (len(list1) == 1 and len(list2) == 1):
-                # print("list1=",list1[0].location)
-                # print("list2=",list2[0].location)
                 if (list1[0].location == list2[0].location):
-                    # print("found cardinal conflict")
-                    # print("list1=", list1)
-                    # print("list2=",list2)
                     return True
         return False
 
@@ -501,6 +493,7 @@ class CBSSolverIvan(object):
                     flag = False
                 j += 1
             i += 1
+
         for i in range(0, 2):
             CG_copy = CG.copy()
             #CG_copy.assign(CG.cbegin(), CG.cend())
@@ -514,26 +507,6 @@ class CBSSolverIvan(object):
                 return True
         return False
 
-    def is_cardinal_conflict(self, collision, mdds):
-        a1 = collision['a1']
-        a2 = collision['a2']
-        t = collision['time_step']
-        loc = collision['loc']
-        mdd1 = mdds[a1]
-        mdd2 = mdds[a2]
-
-        # vertex conflict
-        # The collision is derived from path, and path is derived from mdd. Hence the conflict location is guaranteed in both mdd1 and mdd2 at timestep t.
-        # We only need to check if there is only one node in mdd1 and mdd2 at timestep t
-        if len(loc) == 1:
-            if len(self.get_mdd_nodes(mdd1, t)) == len(self.get_mdd_nodes(mdd2, t)) == 1:
-                return True
-        # edge conflict
-        if len(loc) == 2:  # timestep t > 0 is guaranteed
-            if len(self.get_mdd_nodes(mdd1, t - 1)) == len(self.get_mdd_nodes(mdd1, t)) == len(self.get_mdd_nodes(mdd2, t - 1)) == len(
-                    self.get_mdd_nodes(mdd2, t)) == 1:
-                return True
-        return False
 
     def get_mdd_nodes(self, mdd, time):
         if time < 0:
@@ -757,12 +730,15 @@ class ICBSSolver(object):
             agent2_id = collision['a2']
             agent1_mdd = mdds[agent1_id]
             agent2_mdd = mdds[agent2_id]
+            time_step = collision['time_step']
+            if(len(agent1_mdd.levels) - 1 < time_step or len(agent2_mdd.levels) - 1 < time_step):
+                continue
             if(self.doesContainCardinalConflict(agent1_mdd, agent2_mdd)):
                 return collision
         #otherwise return the first collision
         return collisions[0]
 
-
+        
 
     def find_solution(self, disjoint=False, h=0):
         """ Finds paths for all agents from their start locations to their goal locations
@@ -809,7 +785,6 @@ class ICBSSolver(object):
                 self.print_results(parent_node)
                 return parent_node['paths']
             
-            #TODO take the best collison to resolve 
             
             collision = self.getBetterCollision(parent_node['collisions'], parent_node['mdds'])
             
@@ -945,10 +920,20 @@ class ICBSWithHeuristicsSolver(object):
             # Minimum Vertex Cover
             if parent is None:  # when we are allowed
                 # to replan for multiple agents, the incremental method is not correct any longer.
-                h = self.minimumVertexCoverHelper(HG)
+                h = self.minimumVertexCoverHelper(CG)
             else:
                 #assert len(curr['paths']) == 1
-                h = self.minimumVertexCover(HG, parent['h_value'], self.num_of_agents, num_of_CGedges)
+                h = self.minimumVertexCover(CG, parent['h_value'], self.num_of_agents, num_of_CGedges)
+        elif heuristicType == 2: #DG
+            DG, num_of_DGedges = self.buildDependencyGraph(collisions, HG, curr['mdds'])
+            
+            if parent is None:  # when we are allowed
+                # to replan for multiple agents, the incremental method is not correct any longer.
+                h = self.minimumVertexCoverHelper(DG)
+            else:
+                #assert len(curr['paths']) == 1
+                h = self.minimumVertexCover(DG, parent['h_value'], self.num_of_agents, num_of_DGedges)
+
         #elif heuristicType == 2: #DG
         #    if not buildDependenceGraph(curr, HG, num_of_CGedges):
         #        return False
@@ -968,25 +953,38 @@ class ICBSWithHeuristicsSolver(object):
     def buildCardinalConflictGraph(self, collisions, CG, mdds):
         num_of_CGedges = 0
         for collision in collisions:
-            #print("a2 ", collision['a2'])
-            #print("mdds ", mdds)
-            #print("mdds length", len(mdds))
-            #if self.is_cardinal_conflict(collision, mdds) == 'cardinal':
+           
             a1 = collision['a1']
             a2 = collision['a2']
             mdd1 = mdds[a1]
             mdd2 = mdds[a2]
-            #print('mdds: ', mdds)
-            #print('mdd1: ', mdd1.levels)
-            #print('mdd2: ', mdd2.levels)
+            
             if self.doesContainCardinalConflict(mdd1, mdd2):
-                print('here is cardinal conflict')
                 if CG[a1 * self.num_of_agents + a2] == 0:
                     CG[a1 * self.num_of_agents + a2] = 1
                     CG[a2 * self.num_of_agents + a1] = 1
                     num_of_CGedges += 1
-        print('CG inside buildCardinalConflictGraph: ', CG)
         return CG, num_of_CGedges
+    
+    def buildDependencyGraph(self, collisions, DG, mdds):
+        num_of_DGedges = 0
+
+        for collision in collisions:
+           
+            a1 = collision['a1']
+            a2 = collision['a2']
+            mdd1 = mdds[a1]
+            mdd2 = mdds[a2]
+            
+            if self.areAgentsDependent(mdd1, mdd2):
+                # print("Dependency conflict b/w agents", a1, a2)
+                if DG[a1 * self.num_of_agents + a2] == 0:
+                    DG[a1 * self.num_of_agents + a2] = 1
+                    DG[a2 * self.num_of_agents + a1] = 1
+                    num_of_DGedges += 1
+        # print('DG inside buildDependencyGraph: ', DG)
+        return DG, num_of_DGedges
+
 
     def minimumVertexCoverHelper(self, CG):
         rst = 0
@@ -1045,7 +1043,6 @@ class ICBSWithHeuristicsSolver(object):
                         rst += i
                         break
                     i += 1
-            print('i inside minimumVertexCoverHelper: ', i)
             i += 1
         return rst
 
@@ -1062,7 +1059,7 @@ class ICBSWithHeuristicsSolver(object):
                     num_of_CGnodes += 1
                     break
         if num_of_CGnodes > 8:
-            return self.minimumVertexCover(CG)
+            return self.minimumVertexCoverHelper(CG)
         else:
             if self.KVertexCover(CG, num_of_CGnodes, num_of_CGedges, old_mvc - 1, cols):
                 rst = old_mvc - 1
@@ -1135,26 +1132,60 @@ class ICBSWithHeuristicsSolver(object):
             list1 = levels1[i]
             list2 = levels2[i]
             if (len(list1) == 1 and len(list2) == 1):
-                # print("list1=",list1[0].location)
-                # print("list2=",list2[0].location)
+             
                 if (list1[0].location == list2[0].location):
-                    # print("found cardinal conflict")
-                    # print("list1=", list1)
-                    # print("list2=",list2)
                     return True
+                
         return False
-
-    def getBetterCollision(self, collisions, mdds):
+    
+    def getBetterCollision(self, collisions, mdds): 
         for collision in collisions:
             agent1_id = collision['a1']
             agent2_id = collision['a2']
             agent1_mdd = mdds[agent1_id]
             agent2_mdd = mdds[agent2_id]
-            if (self.doesContainCardinalConflict(agent1_mdd, agent2_mdd)):
+            if(self.doesContainCardinalConflict(agent1_mdd, agent2_mdd)):
                 return collision
-        # otherwise return the first collision
+        #otherwise return the first collision
         return collisions[0]
 
+    def areAgentsDependent(self, mdd1, mdd2):
+        ret = True
+        
+        levels1 = mdd1.levels
+        levels2 = mdd2.levels
+
+        min_level = levels1 if len(levels1) <= len(levels2) else levels2 
+        min_level_length =len(min_level)
+
+        merged_levels = [[] for _ in range (min_level_length)]
+
+        for level in range(min_level_length):
+            list1 = levels1[level]
+            list2 = levels2[level]
+
+            #for each location do a cartisian product
+            for loc_1 in range(len(list1)):
+                for loc_2 in range(len(list2)):
+                    # print("list1 location", list1[loc_1].location)
+                    # print("list2 location", list2[loc_2].location)
+                    if(list1[loc_1].location == list2[loc_2].location):
+                        break
+                    else: 
+                        merged_levels[level].append([list1[loc_1], list2[loc_2]])
+        
+        # print("last element of merged levels",merged_levels[-1])
+        # print("last element of min_level", min_level[-1][0])
+        
+        for pairs in merged_levels[-1]: #last level of merged_levels
+           for cell in pairs:
+                if (min_level[-1][0].location == cell): 
+                    ret = False
+
+        return ret
+
+    
+  
     def find_solution(self, disjoint=False, h=0):
         """ Finds paths for all agents from their start locations to their goal locations
 
