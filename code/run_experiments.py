@@ -3,12 +3,11 @@ import argparse
 import glob
 from pathlib import Path
 from cbs import CBSSolver
-from cbs import ICBSSolver
-from cbs import ICBSWithHeuristicsSolver
-from independent import IndependentSolver
-from prioritized import PrioritizedPlanningSolver
+from icbs import ICBSSolver
+
+
 from visualize import Animation
-from single_agent_planner import get_sum_of_cost
+from common_for_search import get_sum_of_cost
 
 SOLVER = "CBS"
 
@@ -102,29 +101,15 @@ if __name__ == '__main__':
         elif args.solver == "ICBS":
             print("***Run ICBS***")
             icbs =  ICBSSolver(my_map, starts, goals)
-            paths = icbs.find_solution(args.disjoint)
-        elif args.solver == "ICBSWithHeuristics":
-            print("***Run ICBS with Heuristics***")
-            icbsWithHeuristics =  ICBSWithHeuristicsSolver(my_map, starts, goals)
-            paths = icbsWithHeuristics.find_solution(args.disjoint, args.h)
-        elif args.solver == "Independent":
-            print("***Run Independent***")
-            solver = IndependentSolver(my_map, starts, goals)
-            paths = solver.find_solution()
-        elif args.solver == "Prioritized":
-            print("***Run Prioritized***")
-            solver = PrioritizedPlanningSolver(my_map, starts, goals)
-            paths = solver.find_solution()
+            paths = icbs.find_solution(args.disjoint, args.h)
         else:
             raise RuntimeError("Unknown solver!")
 
         cost = get_sum_of_cost(paths)
         result_file.write("{},{}\n".format(file, cost))
-
-
+        
         if not args.batch:
             print("***Test paths on a simulation***")
             animation = Animation(my_map, starts, goals, paths)
-            # animation.save("output.mp4", 1.0)
             animation.show()
     result_file.close()
