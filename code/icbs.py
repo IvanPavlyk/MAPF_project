@@ -1,10 +1,12 @@
 import time as timer
 import heapq
+from cbs import CBSSolver
 from common_for_search import compute_heuristics,get_sum_of_cost
 from single_agent_planner import a_star
 from cbs_utilities import detect_collisions, disjoint_splitting, standard_splitting, paths_violate_constraint, doesContainCardinalConflict, areAgentsDependent, getBetterCollision
 from minimumVertexCover import minimumVertexCover, minimumVertexCoverHelper
-
+from minimumWeightedVertexCover import minimumWeightedVertexCover
+from results import Results
 
 class ICBSSolver(object):
     """The high-level search of CBS."""
@@ -65,10 +67,33 @@ class ICBSSolver(object):
                 h = minimumVertexCoverHelper(DG, self.num_of_agents)
             else:
                 h = minimumVertexCover(DG, parent['h_value'], self.num_of_agents, num_of_DGedges)
+        elif heuristicType == 3: #WDG
+            WDG, isFound = self.buildEdgeWeightedDependancyGraph(collisions, HG, curr['mdds'], curr['constraints'])
+
+            if (isFound == False):
+                return False, 0
+
+            h = minimumWeightedVertexCover(WDG, self.num_of_agents)
+            print("computed h =" , h)
+
         if h < 0:
             return False, 0
         return True, max(h, curr['h_value'])
 
+    def solve2Agents(self, my_map, starts, goals):
+      
+        icbs =  ICBSSolver(my_map, starts, goals)
+        time, expanded, generated, paths = icbs.find_solution(disjoint = True, h = 2)
+       
+        if(paths == None):
+            return None 
+
+        cost1 = get_sum_of_cost(paths[0])
+        cost2 = get_sum_of_cost(paths[1])
+        cost = cost1 + cost2        
+        print("two agent solver paths ", paths)
+        return cost
+    
     def buildCardinalConflictGraph(self, collisions, CG, mdds):
         num_of_CGedges = 0
         for collision in collisions:
@@ -102,9 +127,40 @@ class ICBSSolver(object):
                     num_of_DGedges += 1
         return DG, num_of_DGedges
 
-    def buildEdgeWeightedDependancyGraph(self, collisions, DG, mdds):
+    def buildEdgeWeightedDependancyGraph(self, collisions, DG, mdds, constraints):
+        
+        for collision in collisions:
+            a1 = collision['a1']
+            a2 = collision['a2']
+            mdd1 = mdds[a1]
+            mdd2 = mdds[a2]
+            if areAgentsDependent(mdd1, mdd2):
+                    if DG[a1 * self.num_of_agents + a2] == 0:
+                        optimal_path_a1 = a_star(self.my_map, self.starts[a1], self.goals[a1], self.heuristics[a1], a1, constraints)
+                        optimal_path_a2 = a_star(self.my_map, self.starts[a2], self.goals[a2], self.heuristics[a2], a2, constraints)
+                      
+                        if(optimal_path_a1 == None or optimal_path_a2 == None):
+                            continue
+                        conflict_free_cost = self.solve2Agents(self.my_map, [self.starts[a1], self.starts[a2]], [self.goals[a1], self.goals[a2]])
+                        
+                        # print("conflict free cost", conflict_free_cost)
 
-        return DG
+                        # print("Agent 1 paths  ", optimal_path_a1)
+                        # print("agent 2 paths ", optimal_path_a2)
+                        # print("Agent optimal  ", get_sum_of_cost(optimal_path_a1) + get_sum_of_cost(optimal_path_a2))
+
+                        if(conflict_free_cost == None):
+                            continue
+
+                        value = conflict_free_cost - (get_sum_of_cost(optimal_path_a1) + get_sum_of_cost(optimal_path_a2))
+                        
+                        # print("optimal cost",get_sum_of_cost([optimal_path_a1, optimal_path_a2]) )
+                        DG[a1 * self.num_of_agents + a2] = (value)
+                        DG[a2 * self.num_of_agents + a1] = (value)
+        print("Dg =", DG)
+        return DG, True
+
+    
 
     def find_solution(self, disjoint=False, h=0):
         """ Finds paths for all agents from their start locations to their goal locations
@@ -128,7 +184,7 @@ class ICBSSolver(object):
             root['paths'].append(path)
             root['mdds'].append(mdd)
 
-        # print(root['mdds'].levels)
+      
         root['collisions'] = detect_collisions(root['paths'])
         root['cost'] = get_sum_of_cost(root['paths'])
         success, root['h_value'] = self.computeInformedHeuristics(root['collisions'], root, None, h)
@@ -224,8 +280,9 @@ class ICBSSolver(object):
                         print('h<0')
                     if (is_path_found == True):
                         self.push_node(Q)
+        print("No solutions")
+        return None, None, None, None
 
-        raise BaseException("No solutions")
 
     def print_results(self, node):
         print("\n Found a solution! \n")

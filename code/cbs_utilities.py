@@ -1,6 +1,9 @@
 import random
 from common_for_search import get_location
-
+# from icbs import ICBSSolver
+# from run_experiments import Results
+# from common_for_search import get_sum_of_cost
+from common_for_search import get_location
 def detect_collision(path1, path2):
     ##############################
     # Return the first collision that occurs between two robot paths (or None if there is no collision)
