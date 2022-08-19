@@ -1,7 +1,7 @@
-# Improved Conflict Based Search With Heuristics 
-This project offers solving  Multi-Agent-Path-Finding(MAPF) problem optimally using Conflict-Based Search(CBS). 
+# Improved Conflict-Based Search With Heuristics 
+This project offers to solve Multi-Agent-Path-Finding(MAPF) problem optimally using Conflict-Based Search(CBS). 
 
-To improve the performance of CBS, the project constains implementations of the following heuristics to guide the high-level CBS algorithm: 
+To improve the performance of CBS, the project contains implementations of the following heuristics to guide the high-level CBS algorithm: 
 
 * Prioritize cardinal conflict over non-cardinal and semi-cardinal conflicts 
 * Minimum Vertex Cover of Cardinal Conflict Graph
@@ -20,7 +20,7 @@ The search algorithm also contains two implementations of resolving collisions
 - disjoint: specifies if to use disjoint splitting 
 - solver: MAPF solver, either "CBS" or "ICBS"
 - h: 
-  - --h 0: Priorotizing Cardinal Conflicts
+  - --h 0: Prioritizing Cardinal Conflicts
   - --h 1: Using Cardinal Graph(CG) heuristics
   - --h 2: Using Dependency Graph(DG) heuristic
   - --h 3: Using Weighted Dependency Graph Heuristic(WDG) heuristic
@@ -32,7 +32,3 @@ The search algorithm also contains two implementations of resolving collisions
 
 This project is an implementation of the following paper: 
 https://www2.cs.sfu.ca/~hangma/pub/ijcai19.pdf
-    
-
-  
-
