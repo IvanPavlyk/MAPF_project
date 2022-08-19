@@ -102,6 +102,10 @@ class ICBSSolver(object):
                     num_of_DGedges += 1
         return DG, num_of_DGedges
 
+    def buildEdgeWeightedDependancyGraph(self, collisions, DG, mdds):
+
+        return DG
+
     def find_solution(self, disjoint=False, h=0):
         """ Finds paths for all agents from their start locations to their goal locations
 
