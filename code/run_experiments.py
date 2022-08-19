@@ -124,7 +124,9 @@ if __name__ == '__main__':
             if args.solver == "CBS":
                 print("***Run CBS***")
                 cbs = CBSSolver(my_map, starts, goals)
-                paths = cbs.find_solution(args.disjoint)
+                time, expanded, generated, paths = cbs.find_solution(args.disjoint)
+                results.addValues(time, expanded, generated)
+                global_cost += get_sum_of_cost(paths)
             elif args.solver == "ICBS":
                 print("***Run ICBS***")
                 icbs =  ICBSSolver(my_map, starts, goals)
