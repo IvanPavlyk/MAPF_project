@@ -130,7 +130,7 @@ if __name__ == '__main__':
             elif args.solver == "ICBS":
                 print("***Run ICBS***")
                 icbs =  ICBSSolver(my_map, starts, goals)
-                time, expanded, generated, paths = icbs.find_solution(args.disjoint)
+                time, expanded, generated, paths = icbs.find_solution(args.disjoint, args.h)
                 results.addValues(time, expanded, generated)
                 global_cost += get_sum_of_cost(paths)
             
