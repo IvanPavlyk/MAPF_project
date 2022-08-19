@@ -73,12 +73,11 @@ class MDD():
                 if (is_constrained(curr.location, child_loc, curr.level + 1, self.negative_table)):
                     continue
             
-                # if (is_constrained(child_loc, curr.location, curr.level + 1, self.negative_table)):
-                #     continue
-
+            
                 #Check if new node satisfies the passed positive constraints, if doesn't -> prune
                 p_node = {'loc': curr.location}
                 c_node = {'loc': child_loc} 
+                
                 if (is_positive_satisfied(parent_node = p_node, child_node = c_node, next_time = curr.level + 1, positive_constraints = self.positive_table) == False):
                     continue
               
@@ -100,10 +99,7 @@ class MDD():
                         childNode.cost = self.num_levels - 1
                         self.open_list.append(childNode)
                         self.closed_list.append(childNode)
-        # print("goal node: ", self.levels[-1][0].location)
-        
-        
-        assert(len(self.levels[-1]) == 1)
+    
         
         goal_node = self.levels[-1][-1]
         delete = None
