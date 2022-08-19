@@ -69,6 +69,29 @@ def import_mapf_instance(filename):
     f.close()
     return my_map, starts, goals
 
+class Results(object):
+    def __init__(self):
+        """my_map   - list of lists specifying obstacle positions
+        starts      - [(x1, y1), (x2, y2), ...] list of start locations
+        goals       - [(x1, y1), (x2, y2), ...] list of goal locations
+        """
+        self.cpu_time = 0
+        self.expanded = 0
+        self.generated = 0
+
+    def addValues(self, cpu_time, expanded, generated):
+        self.cpu_time += cpu_time
+        self.expanded += expanded
+        self.generated += generated
+
+    def printResults(self, num_of_experiments):
+        print("Time: ", self.cpu_time)
+        print("Expanded nodes: ", self.expanded)
+        print("Generated nodes: ", self.generated)
+        print("------------------")
+        print("Average time: ", self.cpu_time/num_of_experiments)
+        print("Average expanded nodes: ", self.expanded/num_of_experiments)
+        print("Average generated nodes: ", self.generated/num_of_experiments)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Runs various MAPF algorithms')
@@ -80,6 +103,8 @@ if __name__ == '__main__':
                         help='Use the disjoint splitting')
     parser.add_argument('--h', type=int, default=0,
                         help='The heuristic to use (one of: {none,cg,dg,wdg}), defaults to none')
+    parser.add_argument('--r', type=int, default=0,
+                        help='The number of repeats')
     parser.add_argument('--solver', type=str, default=SOLVER,
                         help='The solver to use (one of: {CBS,Independent,Prioritized}), defaults to ' + str(SOLVER))
 
@@ -93,21 +118,30 @@ if __name__ == '__main__':
         print("***Import an instance***")
         my_map, starts, goals = import_mapf_instance(file)
         print_mapf_instance(my_map, starts, goals)
+        global_cost = 0
+        results = Results()
+        for i in range(args.r):
+            if args.solver == "CBS":
+                print("***Run CBS***")
+                cbs = CBSSolver(my_map, starts, goals)
+                paths = cbs.find_solution(args.disjoint)
+            elif args.solver == "ICBS":
+                print("***Run ICBS***")
+                icbs =  ICBSSolver(my_map, starts, goals)
+                time, expanded, generated, paths = icbs.find_solution(args.disjoint)
+                results.addValues(time, expanded, generated)
+                global_cost += get_sum_of_cost(paths)
+            
+            else:
+                raise RuntimeError("Unknown solver!")
 
-        if args.solver == "CBS":
-            print("***Run CBS***")
-            cbs = CBSSolver(my_map, starts, goals)
-            paths = cbs.find_solution(args.disjoint)
-        elif args.solver == "ICBS":
-            print("***Run ICBS***")
-            icbs =  ICBSSolver(my_map, starts, goals)
-            paths = icbs.find_solution(args.disjoint, args.h)
-        else:
-            raise RuntimeError("Unknown solver!")
-
+        print("Global average cost of paths: ", global_cost/args.r)
         cost = get_sum_of_cost(paths)
         result_file.write("{},{}\n".format(file, cost))
-        
+        results.printResults(args.r)
+
+
+
         if not args.batch:
             print("***Test paths on a simulation***")
             animation = Animation(my_map, starts, goals, paths)
