@@ -5,32 +5,32 @@ import random
 from queue import Queue
 from single_agent_planner import compute_heuristics, a_star, get_location, get_sum_of_cost, pop_node, push_node
 
+
 def detect_collision(path1, path2):
     ##############################
     # Return the first collision that occurs between two robot paths (or None if there is no collision)
     # There are two types of collisions: vertex collision and edge collision.
     # A vertex collision occurs if both robots occupy the same location at the same timestep
     # An edge collision occurs if the robots swap their location at the same timestep.
-    
+
     path1_len = len(path1)
     path2_len = len(path2)
-   
+
     max_time_steps = max(path1_len, path2_len)
     for time_step in range(max_time_steps):
-        agent1_loc_curr = get_location(path1,time_step)
+        agent1_loc_curr = get_location(path1, time_step)
         agent2_loc_curr = get_location(path2, time_step)
-        agent1_loc_prev = get_location(path1,time_step + 1)
-        agent2_loc_prev = get_location(path2,time_step + 1)
+        agent1_loc_prev = get_location(path1, time_step + 1)
+        agent2_loc_prev = get_location(path2, time_step + 1)
 
-        #detect vertex collision
+        # detect vertex collision
         if (agent1_loc_curr == agent2_loc_curr):
-            return {'loc': [agent1_loc_curr], 'time_step' : time_step}
-        
-        #detect edge collision
-        if (agent1_loc_curr == agent2_loc_prev and agent1_loc_prev == agent2_loc_curr ):
-            return {'loc': [ agent2_loc_curr, agent2_loc_prev], 'time_step' : time_step + 1}
-    return None  
-     
+            return {'loc': [agent1_loc_curr], 'time_step': time_step}
+
+        # detect edge collision
+        if (agent1_loc_curr == agent2_loc_prev and agent1_loc_prev == agent2_loc_curr):
+            return {'loc': [agent2_loc_curr, agent2_loc_prev], 'time_step': time_step + 1}
+    return None
 
 
 def detect_collisions(paths):
@@ -38,17 +38,17 @@ def detect_collisions(paths):
     # Return a list of first collisions between all robot pairs.
     # A collision can be represented as dictionary that contains the id of the two robots, the vertex or edge
     # causing the collision, and the timestep at which the collision occurred.
- 
+
     agents_num = len(paths)
     collisions = list()
 
-    for agent1_id in range(0,agents_num-1):
-        for agent2_id in range (agent1_id+1,agents_num):
+    for agent1_id in range(0, agents_num - 1):
+        for agent2_id in range(agent1_id + 1, agents_num):
             detected_collision = detect_collision(paths[agent1_id], paths[agent2_id])
             if ((detected_collision) != None):
-                collisions.append({'a1' : agent1_id, 'a2' : agent2_id, 'loc' : detected_collision['loc'], 'time_step' : detected_collision['time_step']})
+                collisions.append({'a1': agent1_id, 'a2': agent2_id, 'loc': detected_collision['loc'],
+                                   'time_step': detected_collision['time_step']})
     return collisions
-
 
 
 def standard_splitting(collision):
@@ -65,16 +65,17 @@ def standard_splitting(collision):
     agent2_id = collision['a2']
     collision_loc = collision['loc']
     time_step = collision['time_step']
-    
-    #if vertex collision 
-    if(len(collision_loc) == 1):
-        return [{'agent' : agent1_id, 'loc': collision_loc, 'time_step': time_step},
-                {'agent' : agent2_id, 'loc': collision_loc, 'time_step': time_step}]
-    
-    #if edge collision 
+
+    # if vertex collision
+    if (len(collision_loc) == 1):
+        return [{'agent': agent1_id, 'loc': collision_loc, 'time_step': time_step},
+                {'agent': agent2_id, 'loc': collision_loc, 'time_step': time_step}]
+
+    # if edge collision
     else:
-        return [{'agent' : agent1_id, 'loc': [collision_loc[1], collision_loc[0]], 'time_step': time_step},
-                {'agent' : agent2_id, 'loc': collision_loc, 'time_step': time_step}]
+        return [{'agent': agent1_id, 'loc': [collision_loc[1], collision_loc[0]], 'time_step': time_step},
+                {'agent': agent2_id, 'loc': collision_loc, 'time_step': time_step}]
+
 
 def disjoint_splitting(collision):
     ##############################
@@ -86,56 +87,54 @@ def disjoint_splitting(collision):
     #                specified timestep, and the second constraint prevents the same agent to traverse the
     #                specified edge at the specified timestep
     # Choose the agent randomly
-    
-    agents =[collision['a1'], collision['a2']]
+
+    agents = [collision['a1'], collision['a2']]
     collision_loc = collision['loc']
     time_step = collision['time_step']
-    chosen_agent = random.randint(0,1) #choose one of the colliding agents randomly 
+    chosen_agent = random.randint(0, 1)  # choose one of the colliding agents randomly
     agent = agents[chosen_agent]
-    
-    #if vertex collision 
-    if(len(collision_loc) == 1):
-        return [{'positive': True,'agent' : agent, 'loc': collision_loc, 'time_step': time_step},
-                {'positive': False,'agent' : agent, 'loc': collision_loc, 'time_step': time_step}]
-    
-    #if edge collision 
+
+    # if vertex collision
+    if (len(collision_loc) == 1):
+        return [{'positive': True, 'agent': agent, 'loc': collision_loc, 'time_step': time_step},
+                {'positive': False, 'agent': agent, 'loc': collision_loc, 'time_step': time_step}]
+
+    # if edge collision
     else:
-        
+
         loc = []
         if (chosen_agent == 0):
             loc = [collision_loc[1], collision_loc[0]]
         else:
             loc = collision_loc
-        return [{'positive': True, 'agent' : agent, 'loc': loc, 'time_step': time_step},
-                {'positive': False, 'agent' : agent, 'loc': loc, 'time_step': time_step}]
-   
+        return [{'positive': True, 'agent': agent, 'loc': loc, 'time_step': time_step},
+                {'positive': False, 'agent': agent, 'loc': loc, 'time_step': time_step}]
 
-#Gives a list of agent ids that violate passed positive constraint from given list of paths
+
+# Gives a list of agent ids that violate passed positive constraint from given list of paths
 def paths_violate_constraint(paths, constraint):
-    
-    if (constraint['positive']): 
+    if (constraint['positive']):
         violated_agentsIds = list()
-        agents_num = len(paths) 
-        
-        for agent in range (agents_num): 
+        agents_num = len(paths)
+
+        for agent in range(agents_num):
             if (agent != constraint['agent']):
-                #build a pseudo path with the passed constrain 
+                # build a pseudo path with the passed constrain
                 temp_path = [None] * (constraint['time_step'] + 1)
-   
+
                 if (len(constraint['loc']) == 1):
                     temp_path[constraint['time_step']] = constraint['loc'][0]
                 else:
                     temp_path[constraint['time_step'] - 1] = constraint['loc'][0]
                     temp_path[constraint['time_step']] = constraint['loc'][1]
-                
-                #detect collisions with the pseudo constructed path
+
+                # detect collisions with the pseudo constructed path
                 collision = detect_collision(paths[agent], temp_path)
-                if(collision is not None):
+                if (collision is not None):
                     violated_agentsIds.append(agent)
         return violated_agentsIds
 
     return []
-    
 
 
 class CBSSolver(object):
@@ -302,7 +301,8 @@ class CBSSolverIvan(object):
             self.heuristics.append(compute_heuristics(my_map, goal))
 
     def push_node(self, node):
-        heapq.heappush(self.open_list, (node['cost'] + node['h_value'], len(node['collisions']), self.num_of_generated, node['h_value'], node))
+        heapq.heappush(self.open_list, (
+        node['cost'] + node['h_value'], len(node['collisions']), self.num_of_generated, node['h_value'], node))
         print("Generate node {}".format(self.num_of_generated))
         self.num_of_generated += 1
 
@@ -315,20 +315,20 @@ class CBSSolverIvan(object):
     def computeInformedHeuristics(self, collisions, curr, parent, heuristicType):
         # create conflict graph
         num_of_CGedges = None
-        HG = [0]*(self.num_of_agents * self.num_of_agents)   # heuristic graph
+        HG = [0] * (self.num_of_agents * self.num_of_agents)  # heuristic graph
         h = -1
         if heuristicType == 0:
             h = 0
-        elif heuristicType == 1: #CG
+        elif heuristicType == 1:  # CG
             CG, num_of_CGedges = self.buildCardinalConflictGraph(collisions, HG, curr['mdds'])
             # Minimum Vertex Cover
             if parent is None:  # when we are allowed
                 # to replan for multiple agents, the incremental method is not correct any longer.
                 h = self.minimumVertexCoverHelper(HG)
             else:
-                #assert len(curr['paths']) == 1
+                # assert len(curr['paths']) == 1
                 h = self.minimumVertexCover(HG, parent['h_value'], self.num_of_agents, num_of_CGedges)
-        #elif heuristicType == 2: #DG
+        # elif heuristicType == 2: #DG
         #    if not buildDependenceGraph(curr, HG, num_of_CGedges):
         #        return False
         #    # Minimum Vertex Cover
@@ -336,7 +336,7 @@ class CBSSolverIvan(object):
         #        h = minimumVertexCover(HG)
         #    else:
         #        h = minimumVertexCover(HG, curr.parent.h_val, num_of_agents, num_of_CGedges)
-        #elif heuristicType == 3: #WDG
+        # elif heuristicType == 3: #WDG
         #    if not buildWeightedDependencyGraph(curr, HG):
         #        return False
         #    h = minimumWeightedVertexCover(HG)
@@ -347,16 +347,13 @@ class CBSSolverIvan(object):
     def buildCardinalConflictGraph(self, collisions, CG, mdds):
         num_of_CGedges = 0
         for collision in collisions:
-            #print("a2 ", collision['a2'])
-            #print("mdds ", mdds)
-            #print("mdds length", len(mdds))
-            #if self.is_cardinal_conflict(collision, mdds) == 'cardinal':
+
             a1 = collision['a1']
             a2 = collision['a2']
             mdd1 = mdds[a1]
             mdd2 = mdds[a2]
-            if self.doesContainCardinalConflict(mdd1, mdd2):
-                print('here is cardinal conflict')
+            if (self.doesContainCardinalConflict(mdd1, mdd2)):
+
                 if CG[a1 * self.num_of_agents + a2] == 0:
                     CG[a1 * self.num_of_agents + a2] = 1
                     CG[a2 * self.num_of_agents + a1] = 1
@@ -372,12 +369,7 @@ class CBSSolverIvan(object):
             list1 = levels1[i]
             list2 = levels2[i]
             if (len(list1) == 1 and len(list2) == 1):
-                # print("list1=",list1[0].location)
-                # print("list2=",list2[0].location)
                 if (list1[0].location == list2[0].location):
-                    # print("found cardinal conflict")
-                    # print("list1=", list1)
-                    # print("list2=",list2)
                     return True
         return False
 
@@ -395,7 +387,7 @@ class CBSSolverIvan(object):
             done[i] = True
             while not Q.empty():
                 j = Q.get()
-                #Q.pop()
+                # Q.pop()
                 indices.append(j)
                 k = 0
                 while k < self.num_of_agents:
@@ -501,9 +493,10 @@ class CBSSolverIvan(object):
                     flag = False
                 j += 1
             i += 1
+
         for i in range(0, 2):
             CG_copy = CG.copy()
-            #CG_copy.assign(CG.cbegin(), CG.cend())
+            # CG_copy.assign(CG.cbegin(), CG.cend())
             num_of_CGedges_copy = num_of_CGedges
             for j in range(0, cols):
                 if CG_copy[node[i] * cols + j] > 0:
@@ -511,27 +504,6 @@ class CBSSolverIvan(object):
                     CG_copy[j * cols + node[i]] = 0
                     num_of_CGedges_copy -= 1
             if self.KVertexCover(CG_copy, num_of_CGnodes - 1, num_of_CGedges_copy, k - 1, cols):
-                return True
-        return False
-
-    def is_cardinal_conflict(self, collision, mdds):
-        a1 = collision['a1']
-        a2 = collision['a2']
-        t = collision['time_step']
-        loc = collision['loc']
-        mdd1 = mdds[a1]
-        mdd2 = mdds[a2]
-
-        # vertex conflict
-        # The collision is derived from path, and path is derived from mdd. Hence the conflict location is guaranteed in both mdd1 and mdd2 at timestep t.
-        # We only need to check if there is only one node in mdd1 and mdd2 at timestep t
-        if len(loc) == 1:
-            if len(self.get_mdd_nodes(mdd1, t)) == len(self.get_mdd_nodes(mdd2, t)) == 1:
-                return True
-        # edge conflict
-        if len(loc) == 2:  # timestep t > 0 is guaranteed
-            if len(self.get_mdd_nodes(mdd1, t - 1)) == len(self.get_mdd_nodes(mdd1, t)) == len(self.get_mdd_nodes(mdd2, t - 1)) == len(
-                    self.get_mdd_nodes(mdd2, t)) == 1:
                 return True
         return False
 
@@ -545,15 +517,15 @@ class CBSSolverIvan(object):
 
     def build_mdd(self, paths):
         path_len = len(paths[0])
-        i= 0
+        i = 0
         for path in paths:
-            print("path ",i, " ", path)
+            print("path ", i, " ", path)
             i += 1
         print("path_len ", path_len)
         print("paths length", len(paths))
         mdd = []
 
-        #???????????path_len???????????instead of path_len+1
+        # ???????????path_len???????????instead of path_len+1
         for ts in range(path_len):
             locs = [p[ts] for p in paths]
             locs_set = set(locs)
@@ -584,9 +556,9 @@ class CBSSolverIvan(object):
                 'mdds': []}
         for i in range(self.num_of_agents):  # Find initial path for each agent
             path, mddi = a_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
-                          i, root['constraints'])
+                                i, root['constraints'])
             root['mdds'].append(mddi)
-         
+
             if path is None:
                 raise BaseException('No solutions')
             root['paths'].append(path)
@@ -604,25 +576,25 @@ class CBSSolverIvan(object):
         #   2. If this node has no collision, return solution
         #   3. Otherwise, choose the first collision and convert to a list of constraints (using your
         #      standard_splitting function). Add a new child node to your open list for each constraint
-        
-        while (len(self.open_list) > 0):   
+
+        while (len(self.open_list) > 0):
             node = self.pop_node()
-            if (len(node['collisions']) == 0): #if no collisions return paths    
-                #print("PAths", node['paths'])
-                #print("Sum of costs", node['cost'])
+            if (len(node['collisions']) == 0):  # if no collisions return paths
+                # print("PAths", node['paths'])
+                # print("Sum of costs", node['cost'])
                 self.print_results(node)
                 return node['paths']
-         
+
             parent_node = self.pop_node()
-            if (len(parent_node['collisions']) == 0): #if no collisions return paths    
+            if (len(parent_node['collisions']) == 0):  # if no collisions return paths
                 self.print_results(parent_node)
-                return parent_node['paths']       
-            collision = parent_node['collisions'][0] #take one collision
+                return parent_node['paths']
+            collision = parent_node['collisions'][0]  # take one collision
             constraints = constraints = disjoint_splitting(collision) if disjoint else standard_splitting(collision)
 
             for constraint in constraints:
-                #create an empty node Q
-                
+                # create an empty node Q
+
                 Q = {
                     'cost': 0,
                     'constraints': [],
@@ -630,43 +602,43 @@ class CBSSolverIvan(object):
                     'collisions': [],
                     'h_value': 0,
                     'mdds': node['mdds'].copy()
-                    }
-                #Copy all constraints from the parent node and add additional constraint 
-                Q['constraints'] = node['constraints'].copy()           #deep copy
+                }
+                # Copy all constraints from the parent node and add additional constraint
+                Q['constraints'] = node['constraints'].copy()  # deep copy
                 Q['constraints'].append(constraint)
-                Q['paths'] = node['paths'].copy()  
+                Q['paths'] = node['paths'].copy()
                 ai = constraint['agent']
-                
-                #build new path with the new constraint 
-                path, mddi = a_star(  my_map = self.my_map,
-                                start_loc = self.starts[ai], 
-                                goal_loc = self.goals[ai], 
-                                h_values = self.heuristics[ai],
-                                agent = ai,
-                                constraints = Q['constraints'])
+
+                # build new path with the new constraint
+                path, mddi = a_star(my_map=self.my_map,
+                                    start_loc=self.starts[ai],
+                                    goal_loc=self.goals[ai],
+                                    h_values=self.heuristics[ai],
+                                    agent=ai,
+                                    constraints=Q['constraints'])
                 is_path_found = True
                 if (path is not None):
-                    if(constraint['positive']):
-                        broken_agents_paths = paths_violate_constraint(parent_node['paths'], constraint)    
+                    if (constraint['positive']):
+                        broken_agents_paths = paths_violate_constraint(parent_node['paths'], constraint)
                         for agent in broken_agents_paths:
-                         
-                            #generate new path for the broken agent's paths 
-                            updated_path = a_star   (my_map = self.my_map,
-                                                    start_loc = self.starts[agent], 
-                                                    goal_loc = self.goals[agent], 
-                                                    h_values = self.heuristics[agent],
-                                                    agent = agent,
-                                                    constraints = Q['constraints'])
-                            #break if updated path doesn't exist
+
+                            # generate new path for the broken agent's paths
+                            updated_path = a_star(my_map=self.my_map,
+                                                  start_loc=self.starts[agent],
+                                                  goal_loc=self.goals[agent],
+                                                  h_values=self.heuristics[agent],
+                                                  agent=agent,
+                                                  constraints=Q['constraints'])
+                            # break if updated path doesn't exist
                             if (updated_path is None):
                                 is_path_found = False
                                 break
-                            #else add the path to high-level node
+                            # else add the path to high-level node
                             Q['paths'][agent] = updated_path
                             Q['mdds'][agent] = mddi
-                    
-                    if(is_path_found == False):
-                        continue        
+
+                    if (is_path_found == False):
+                        continue
 
                     Q['collisions'] = detect_collisions(Q['paths'])
                     Q['cost'] = get_sum_of_cost(Q['paths'])
@@ -677,17 +649,17 @@ class CBSSolverIvan(object):
                 else:
                     print("Constraint", constraint)
                     print("Q constraints", Q['constraints'])
-                    print("Start",  self.starts[ai])
+                    print("Start", self.starts[ai])
                     print("Goal ", self.goals[ai])
-                    print("path is non")                                                          
-                    Q['paths'] [ai] = path
+                    print("path is non")
+                    Q['paths'][ai] = path
                     Q['collisions'] = detect_collisions(Q['paths'])
                     Q['cost'] = get_sum_of_cost(Q['paths'])
-                    if(is_path_found == True):
+                    if (is_path_found == True):
                         self.push_node(Q)
-               
+
         raise BaseException("No solutions")
-     
+
     def print_results(self, node):
         print("\n Found a solution! \n")
         CPU_time = timer.time() - self.start_time
@@ -696,7 +668,7 @@ class CBSSolverIvan(object):
         print("Expanded nodes:  {}".format(self.num_of_expanded))
         print("Generated nodes: {}".format(self.num_of_generated))
 
-       
+
 class ICBSSolver(object):
     """The high-level search of CBS."""
 
@@ -737,32 +709,33 @@ class ICBSSolver(object):
         levels1 = mdd1.levels
         levels2 = mdd2.levels
         min_length = min(len(levels1), len(levels2))
-        
-        for i in range (min_length):
+
+        for i in range(min_length):
             list1 = levels1[i]
-            list2 = levels2[i]     
+            list2 = levels2[i]
             if (len(list1) == 1 and len(list2) == 1):
                 # print("list1=",list1[0].location)
                 # print("list2=",list2[0].location)
-                if(list1[0].location == list2[0].location):
+                if (list1[0].location == list2[0].location):
                     # print("found cardinal conflict")
                     # print("list1=", list1)
                     # print("list2=",list2)
-                    return True 
+                    return True
         return False
 
-    def getBetterCollision(self, collisions, mdds): 
+    def getBetterCollision(self, collisions, mdds):
         for collision in collisions:
             agent1_id = collision['a1']
             agent2_id = collision['a2']
             agent1_mdd = mdds[agent1_id]
             agent2_mdd = mdds[agent2_id]
-            if(self.doesContainCardinalConflict(agent1_mdd, agent2_mdd)):
+            time_step = collision['time_step']
+            if (len(agent1_mdd.levels) - 1 < time_step or len(agent2_mdd.levels) - 1 < time_step):
+                continue
+            if (self.doesContainCardinalConflict(agent1_mdd, agent2_mdd)):
                 return collision
-        #otherwise return the first collision
+        # otherwise return the first collision
         return collisions[0]
-
-
 
     def find_solution(self, disjoint=False, h=0):
         """ Finds paths for all agents from their start locations to their goal locations
@@ -771,17 +744,17 @@ class ICBSSolver(object):
         """
 
         self.start_time = timer.time()
-        cbsIvan = CBSSolverIvan(my_map=self.my_map,goals=self.goals, starts=self.starts)
+        cbsIvan = CBSSolverIvan(my_map=self.my_map, goals=self.goals, starts=self.starts)
         root = {'cost': 0,
                 'constraints': [],
                 'paths': [],
-                'collisions': [], 
+                'collisions': [],
                 'mdds': [],
                 'h_value': 0}
         for i in range(self.num_of_agents):  # Find initial path for each agent
             path, mdd = a_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
-                          i, root['constraints'], isMDD=True)
-         
+                               i, root['constraints'], isMDD=True)
+
             if path is None:
                 raise BaseException('No solutions')
             root['paths'].append(path)
@@ -789,11 +762,10 @@ class ICBSSolver(object):
 
         # print(root['mdds'].levels)
 
-        
         root['cost'] = get_sum_of_cost(root['paths'])
         root['collisions'] = detect_collisions(root['paths'])
         self.push_node(root)
-      
+
         ##############################
         # High-Level Search
         # Repeat the following as long as the open list is not empty:
@@ -801,27 +773,24 @@ class ICBSSolver(object):
         #   2. If this node has no collision, return solution
         #   3. Otherwise, choose the first collision and convert to a list of constraints (using your
         #      standard_splitting function). Add a new child node to your open list for each constraint
-        
+
         while (len(self.open_list) > 0):
-         
+
             parent_node = self.pop_node()
-            if (len(parent_node['collisions']) == 0): #if no collisions return paths    
+            if (len(parent_node['collisions']) == 0):  # if no collisions return paths
                 self.print_results(parent_node)
-                CPU_time = timer.time() - self.start_time
-                return CPU_time, self.num_of_expanded, self.num_of_generated, parent_node['paths']
-            
-            #TODO take the best collison to resolve 
-            
+                return parent_node['paths']
+
             collision = self.getBetterCollision(parent_node['collisions'], parent_node['mdds'])
-            
+
             # collision = parent_node['collisions'][0] #take one collision
 
-            #splitting the collision 
+            # splitting the collision
             constraints = disjoint_splitting(collision) if disjoint else standard_splitting(collision)
 
             for constraint in constraints:
-                #create an empty node Q
-                
+                # create an empty node Q
+
                 Q = {
                     'cost': 0,
                     'constraints': [],
@@ -829,64 +798,57 @@ class ICBSSolver(object):
                     'collisions': [],
                     'mdds': [],
                     'h_value': 0
-                    }
-              
-              
-                #Copy all constraints from the parent node and add additional constraint     
-                Q['constraints'] = parent_node['constraints'].copy()           #deep copy 
-                Q['constraints'].append(constraint)                    
+                }
+
+                # Copy all constraints from the parent node and add additional constraint
+                Q['constraints'] = parent_node['constraints'].copy()  # deep copy
+                Q['constraints'].append(constraint)
                 Q['paths'] = parent_node['paths'].copy()
                 Q['mdds'] = parent_node['mdds'].copy()
-               
+
                 ai = constraint['agent']
-                
-                #build new path with the new constraint 
-                path, mdd = a_star(  my_map = self.my_map,
-                                start_loc = self.starts[ai], 
-                                goal_loc = self.goals[ai], 
-                                h_values = self.heuristics[ai],
-                                agent = ai,
-                                constraints = Q['constraints'],
-                                isMDD = True)
+
+                # build new path with the new constraint
+                path, mdd = a_star(my_map=self.my_map,
+                                   start_loc=self.starts[ai],
+                                   goal_loc=self.goals[ai],
+                                   h_values=self.heuristics[ai],
+                                   agent=ai,
+                                   constraints=Q['constraints'],
+                                   isMDD=True)
                 is_path_found = True
-                
+
                 if (path is not None):
-                    if(constraint['positive']):
-                        broken_agents_paths = paths_violate_constraint(parent_node['paths'], constraint)    
+                    if (constraint['positive']):
+                        broken_agents_paths = paths_violate_constraint(parent_node['paths'], constraint)
                         for agent in broken_agents_paths:
-                         
-                            #generate new path for the broken agent's paths 
-                            updated_path, updated_mdd = a_star   (my_map = self.my_map,
-                                                    start_loc = self.starts[agent], 
-                                                    goal_loc = self.goals[agent], 
-                                                    h_values = self.heuristics[agent],
-                                                    agent = agent,
-                                                    constraints = Q['constraints'], 
-                                                    isMDD= True)
-                            #break if updated path doesn't exist
+
+                            # generate new path for the broken agent's paths
+                            updated_path, updated_mdd = a_star(my_map=self.my_map,
+                                                               start_loc=self.starts[agent],
+                                                               goal_loc=self.goals[agent],
+                                                               h_values=self.heuristics[agent],
+                                                               agent=agent,
+                                                               constraints=Q['constraints'],
+                                                               isMDD=True)
+                            # break if updated path doesn't exist
                             if (updated_path is None):
                                 is_path_found = False
                                 break
-                            #else add the path to high-level node
+                            # else add the path to high-level node
                             Q['paths'][agent] = updated_path
                             Q['mdds'][agent] = updated_mdd
-                                        
-                            
-                    Q['paths'] [ai] = path
+
+                    Q['paths'][ai] = path
                     Q['mdds'][ai] = mdd
                     Q['collisions'] = detect_collisions(Q['paths'])
                     Q['cost'] = get_sum_of_cost(Q['paths'])
-                    
-                    if(is_path_found == True):
-                        self.push_node(Q)
-               
-        raise BaseException("No solutions")
-       
 
-           
-           
-            
-    
+                    if (is_path_found == True):
+                        self.push_node(Q)
+
+        raise BaseException("No solutions")
+
     def print_results(self, node):
         print("\n Found a solution! \n")
         CPU_time = timer.time() - self.start_time
@@ -922,9 +884,10 @@ class ICBSWithHeuristicsSolver(object):
             self.heuristics.append(compute_heuristics(my_map, goal))
 
     def push_node(self, node):
-        #print('node[cost]: ', node['cost'])
-        #print('node[h_value]: ', node['h_value'])
-        heapq.heappush(self.open_list, (node['cost']+node['h_value'], len(node['collisions']), self.num_of_generated, node['h_value'], node))
+        # print('node[cost]: ', node['cost'])
+        # print('node[h_value]: ', node['h_value'])
+        heapq.heappush(self.open_list, (
+        node['cost'] + node['h_value'], len(node['collisions']), self.num_of_generated, node['h_value'], node))
         print("Generate node {}".format(self.num_of_generated))
         self.num_of_generated += 1
 
@@ -937,21 +900,30 @@ class ICBSWithHeuristicsSolver(object):
     def computeInformedHeuristics(self, collisions, curr, parent, heuristicType):
         # create conflict graph
         num_of_CGedges = None
-        HG = [0]*(self.num_of_agents * self.num_of_agents)   # heuristic graph
+        HG = [0] * (self.num_of_agents * self.num_of_agents)  # heuristic graph
         h = -1
         if heuristicType == 0:
             h = 0
-        elif heuristicType == 1: #CG
+        elif heuristicType == 1:  # CG
             CG, num_of_CGedges = self.buildCardinalConflictGraph(collisions, HG, curr['mdds'])
             # Minimum Vertex Cover
             if parent is None:  # when we are allowed
                 # to replan for multiple agents, the incremental method is not correct any longer.
-                h = self.minimumVertexCoverHelper(HG)
+                h = self.minimumVertexCoverHelper(CG)
             else:
-                #assert len(curr['paths']) == 1
-                h = self.minimumVertexCover(HG, parent['h_value'], self.num_of_agents, num_of_CGedges)
-        elif heuristicType == 2: #DG
-            h = self.h_dg(curr['mdds'])
+                # assert len(curr['paths']) == 1
+                h = self.minimumVertexCover(CG, parent['h_value'], self.num_of_agents, num_of_CGedges)
+        elif heuristicType == 2:  # DG
+            DG, num_of_DGedges = self.buildDependencyGraph(collisions, HG, curr['mdds'])
+
+            if parent is None:  # when we are allowed
+                # to replan for multiple agents, the incremental method is not correct any longer.
+                h = self.minimumVertexCoverHelper(DG)
+            else:
+                # assert len(curr['paths']) == 1
+                h = self.minimumVertexCover(DG, parent['h_value'], self.num_of_agents, num_of_DGedges)
+
+        # elif heuristicType == 2: #DG
         #    if not buildDependenceGraph(curr, HG, num_of_CGedges):
         #        return False
         #    # Minimum Vertex Cover
@@ -959,7 +931,7 @@ class ICBSWithHeuristicsSolver(object):
         #        h = minimumVertexCover(HG)
         #    else:
         #        h = minimumVertexCover(HG, curr.parent.h_val, num_of_agents, num_of_CGedges)
-        #elif heuristicType == 3: #WDG
+        # elif heuristicType == 3: #WDG
         #    if not buildWeightedDependencyGraph(curr, HG):
         #        return False
         #    h = minimumWeightedVertexCover(HG)
@@ -970,25 +942,37 @@ class ICBSWithHeuristicsSolver(object):
     def buildCardinalConflictGraph(self, collisions, CG, mdds):
         num_of_CGedges = 0
         for collision in collisions:
-            #print("a2 ", collision['a2'])
-            #print("mdds ", mdds)
-            #print("mdds length", len(mdds))
-            #if self.is_cardinal_conflict(collision, mdds) == 'cardinal':
+
             a1 = collision['a1']
             a2 = collision['a2']
             mdd1 = mdds[a1]
             mdd2 = mdds[a2]
-            #print('mdds: ', mdds)
-            #print('mdd1: ', mdd1.levels)
-            #print('mdd2: ', mdd2.levels)
+
             if self.doesContainCardinalConflict(mdd1, mdd2):
-                print('here is cardinal conflict')
                 if CG[a1 * self.num_of_agents + a2] == 0:
                     CG[a1 * self.num_of_agents + a2] = 1
                     CG[a2 * self.num_of_agents + a1] = 1
                     num_of_CGedges += 1
-        print('CG inside buildCardinalConflictGraph: ', CG)
         return CG, num_of_CGedges
+
+    def buildDependencyGraph(self, collisions, DG, mdds):
+        num_of_DGedges = 0
+
+        for collision in collisions:
+
+            a1 = collision['a1']
+            a2 = collision['a2']
+            mdd1 = mdds[a1]
+            mdd2 = mdds[a2]
+
+            if self.areAgentsDependent(mdd1, mdd2):
+                # print("Dependency conflict b/w agents", a1, a2)
+                if DG[a1 * self.num_of_agents + a2] == 0:
+                    DG[a1 * self.num_of_agents + a2] = 1
+                    DG[a2 * self.num_of_agents + a1] = 1
+                    num_of_DGedges += 1
+        # print('DG inside buildDependencyGraph: ', DG)
+        return DG, num_of_DGedges
 
     def minimumVertexCoverHelper(self, CG):
         rst = 0
@@ -997,7 +981,7 @@ class ICBSWithHeuristicsSolver(object):
         print(CG)
         while i < self.num_of_agents:
             if done[i]:
-                i+=1
+                i += 1
                 continue
             indices = []
             Q = Queue()
@@ -1005,7 +989,7 @@ class ICBSWithHeuristicsSolver(object):
             done[i] = True
             while not Q.empty():
                 j = Q.get()
-                #Q.pop()
+                # Q.pop()
                 indices.append(j)
                 k = 0
                 while k < self.num_of_agents:
@@ -1018,12 +1002,12 @@ class ICBSWithHeuristicsSolver(object):
                             Q.put(k)
                             done[k] = True
                     k += 1
-            if len(indices) == 1:# one node -> no edges -> mvc = 0
-                i+=1
+            if len(indices) == 1:  # one node -> no edges -> mvc = 0
+                i += 1
                 continue
             elif len(indices) == 2:  # two nodes -> only one edge -> mvc = 1
                 rst += 1
-                i+=1# add edge weight
+                i += 1  # add edge weight
                 continue
 
             subgraph = [0] * (len(indices) * len(indices))
@@ -1039,7 +1023,6 @@ class ICBSWithHeuristicsSolver(object):
                     k += 1
                 j += 1
             if len(indices) > 8:
-                print('greedyMatching call from minimumVertexCoverHelper')
                 rst += self.greedyMatching(subgraph, len(indices))
             else:
                 i = 1
@@ -1048,7 +1031,6 @@ class ICBSWithHeuristicsSolver(object):
                         rst += i
                         break
                     i += 1
-            print('i inside minimumVertexCoverHelper: ', i)
             i += 1
         return rst
 
@@ -1065,7 +1047,7 @@ class ICBSWithHeuristicsSolver(object):
                     num_of_CGnodes += 1
                     break
         if num_of_CGnodes > 8:
-            return self.minimumVertexCover(CG)
+            return self.minimumVertexCoverHelper(CG)
         else:
             if self.KVertexCover(CG, num_of_CGnodes, num_of_CGedges, old_mvc - 1, cols):
                 rst = old_mvc - 1
@@ -1100,7 +1082,6 @@ class ICBSWithHeuristicsSolver(object):
             used[ep2] = True
 
     def KVertexCover(self, CG, num_of_CGnodes, num_of_CGedges, k, cols):
-        print('inside K vertex cover')
         if num_of_CGedges == 0:
             return True
         elif num_of_CGedges > k * num_of_CGnodes - k:
@@ -1119,7 +1100,7 @@ class ICBSWithHeuristicsSolver(object):
             i += 1
         for i in range(0, 2):
             CG_copy = CG.copy()
-            #CG_copy.assign(CG.cbegin(), CG.cend())
+            # CG_copy.assign(CG.cbegin(), CG.cend())
             num_of_CGedges_copy = num_of_CGedges
             for j in range(0, cols):
                 if CG_copy[node[i] * cols + j] > 0:
@@ -1139,13 +1120,10 @@ class ICBSWithHeuristicsSolver(object):
             list1 = levels1[i]
             list2 = levels2[i]
             if (len(list1) == 1 and len(list2) == 1):
-                # print("list1=",list1[0].location)
-                # print("list2=",list2[0].location)
+
                 if (list1[0].location == list2[0].location):
-                    # print("found cardinal conflict")
-                    # print("list1=", list1)
-                    # print("list2=",list2)
                     return True
+
         return False
 
     def getBetterCollision(self, collisions, mdds):
@@ -1158,6 +1136,41 @@ class ICBSWithHeuristicsSolver(object):
                 return collision
         # otherwise return the first collision
         return collisions[0]
+
+    def areAgentsDependent(self, mdd1, mdd2):
+        ret = True
+
+        levels1 = mdd1.levels
+        levels2 = mdd2.levels
+
+        min_level = levels1 if len(levels1) <= len(levels2) else levels2
+        min_level_length = len(min_level)
+
+        merged_levels = [[] for _ in range(min_level_length)]
+
+        for level in range(min_level_length):
+            list1 = levels1[level]
+            list2 = levels2[level]
+
+            # for each location do a cartisian product
+            for loc_1 in range(len(list1)):
+                for loc_2 in range(len(list2)):
+                    # print("list1 location", list1[loc_1].location)
+                    # print("list2 location", list2[loc_2].location)
+                    if (list1[loc_1].location == list2[loc_2].location):
+                        break
+                    else:
+                        merged_levels[level].append([list1[loc_1], list2[loc_2]])
+
+        # print("last element of merged levels",merged_levels[-1])
+        # print("last element of min_level", min_level[-1][0])
+
+        for pairs in merged_levels[-1]:  # last level of merged_levels
+            for cell in pairs:
+                if (min_level[-1][0].location == cell):
+                    ret = False
+
+        return ret
 
     def find_solution(self, disjoint=False, h=0):
         """ Finds paths for all agents from their start locations to their goal locations
@@ -1204,8 +1217,7 @@ class ICBSWithHeuristicsSolver(object):
             parent_node = self.pop_node()
             if (len(parent_node['collisions']) == 0):  # if no collisions return paths
                 self.print_results(parent_node)
-                CPU_time = timer.time() - self.start_time
-                return CPU_time, self.num_of_expanded, self.num_of_generated, parent_node['paths']
+                return parent_node['paths']
 
             # TODO take the best collison to resolve
 
