@@ -807,7 +807,8 @@ class ICBSSolver(object):
             parent_node = self.pop_node()
             if (len(parent_node['collisions']) == 0): #if no collisions return paths    
                 self.print_results(parent_node)
-                return parent_node['paths']
+                CPU_time = timer.time() - self.start_time
+                return CPU_time, self.num_of_expanded, self.num_of_generated, parent_node['paths']
             
             #TODO take the best collison to resolve 
             
@@ -949,7 +950,8 @@ class ICBSWithHeuristicsSolver(object):
             else:
                 #assert len(curr['paths']) == 1
                 h = self.minimumVertexCover(HG, parent['h_value'], self.num_of_agents, num_of_CGedges)
-        #elif heuristicType == 2: #DG
+        elif heuristicType == 2: #DG
+            h = self.h_dg(curr['mdds'])
         #    if not buildDependenceGraph(curr, HG, num_of_CGedges):
         #        return False
         #    # Minimum Vertex Cover
@@ -1037,6 +1039,7 @@ class ICBSWithHeuristicsSolver(object):
                     k += 1
                 j += 1
             if len(indices) > 8:
+                print('greedyMatching call from minimumVertexCoverHelper')
                 rst += self.greedyMatching(subgraph, len(indices))
             else:
                 i = 1
@@ -1097,6 +1100,7 @@ class ICBSWithHeuristicsSolver(object):
             used[ep2] = True
 
     def KVertexCover(self, CG, num_of_CGnodes, num_of_CGedges, k, cols):
+        print('inside K vertex cover')
         if num_of_CGedges == 0:
             return True
         elif num_of_CGedges > k * num_of_CGnodes - k:
@@ -1200,7 +1204,8 @@ class ICBSWithHeuristicsSolver(object):
             parent_node = self.pop_node()
             if (len(parent_node['collisions']) == 0):  # if no collisions return paths
                 self.print_results(parent_node)
-                return parent_node['paths']
+                CPU_time = timer.time() - self.start_time
+                return CPU_time, self.num_of_expanded, self.num_of_generated, parent_node['paths']
 
             # TODO take the best collison to resolve
 
