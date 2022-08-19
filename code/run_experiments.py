@@ -132,8 +132,7 @@ if __name__ == '__main__':
                 icbs =  ICBSSolver(my_map, starts, goals)
                 time, expanded, generated, paths = icbs.find_solution(args.disjoint, args.h)
                 results.addValues(time, expanded, generated)
-                global_cost += get_sum_of_cost(paths)
-            
+                global_cost += get_sum_of_cost(paths)        
             else:
                 raise RuntimeError("Unknown solver!")
 
@@ -141,9 +140,7 @@ if __name__ == '__main__':
         cost = get_sum_of_cost(paths)
         result_file.write("{},{}\n".format(file, cost))
         results.printResults(args.r)
-
-
-
+        
         if not args.batch:
             print("***Test paths on a simulation***")
             animation = Animation(my_map, starts, goals, paths)
