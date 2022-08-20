@@ -213,8 +213,10 @@ class ICBSSolver(object):
             if (len(parent_node['collisions']) == 0):  # if no collisions return paths
                 # self.print_results(parent_node)
                 CPU_time = timer.time() - self.start_time
-
-                return CPU_time, self.num_of_expanded, self.num_of_generated, parent_node['paths'], (self.h_values_cumulitive*1.0)/self.h_values_total
+                if(h != 0):
+                    return CPU_time, self.num_of_expanded, self.num_of_generated, parent_node['paths'], (self.h_values_cumulitive*1.0)/self.h_values_total
+                else: 
+                    return CPU_time, self.num_of_expanded, self.num_of_generated, parent_node['paths'], 0
 
             # TODO take the best collison to resolve
 
