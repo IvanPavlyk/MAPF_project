@@ -13,7 +13,6 @@ def minimumVertexCoverHelper(CG, num_of_agents):
             done[i] = True
             while not Q.empty():
                 j = Q.get()
-                #Q.pop()
                 indices.append(j)
                 k = 0
                 while k < num_of_agents:
@@ -26,12 +25,12 @@ def minimumVertexCoverHelper(CG, num_of_agents):
                             Q.put(k)
                             done[k] = True
                     k += 1
-            if len(indices) == 1:# one node -> no edges -> mvc = 0
+            if len(indices) == 1:
                 i+=1
                 continue
-            elif len(indices) == 2:  # two nodes -> only one edge -> mvc = 1
+            elif len(indices) == 2:
                 rst += 1
-                i+=1# add edge weight
+                i+=1
                 continue
 
             subgraph = [0] * (len(indices) * len(indices))
@@ -63,7 +62,6 @@ def minimumVertexCover(CG, old_mvc, cols, num_of_CGedges):
     rst = 0
     if num_of_CGedges < 2:
         return num_of_CGedges
-    # Compute #CG nodes that have edges
     num_of_CGnodes = 0
     for i in range(0, cols):
         for j in range(0, cols):
@@ -112,7 +110,7 @@ def KVertexCover(CG, num_of_CGnodes, num_of_CGedges, k, cols):
     node = [0 for _ in range(2)]
     flag = True
     i = 0
-    while i < cols - 1 and flag:  # to find an edge
+    while i < cols - 1 and flag:
         j = i + 1
         while j < cols and flag:
             if CG[i * cols + j] > 0:
@@ -124,7 +122,6 @@ def KVertexCover(CG, num_of_CGnodes, num_of_CGedges, k, cols):
 
     for i in range(0, 2):
         CG_copy = CG.copy()
-        #CG_copy.assign(CG.cbegin(), CG.cend())
         num_of_CGedges_copy = num_of_CGedges
         for j in range(0, cols):
             if CG_copy[node[i] * cols + j] > 0:

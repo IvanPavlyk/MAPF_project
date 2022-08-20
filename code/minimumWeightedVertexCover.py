@@ -42,12 +42,12 @@ def weightedVertexCover(CG, num_of_agents):
                         done[k] = True
                 k += 1
             num += 1
-        if num == 1:# no edges
+        if num == 1:
             i+=1
             continue
-        elif num == 2:  # only one edge
+        elif num == 2:
             rst += max(CG[indices[0] * num_of_agents + indices[1]],
-                       CG[indices[1] * num_of_agents + indices[0]])  # add edge weight
+                       CG[indices[1] * num_of_agents + indices[0]])
             i += 1
             continue
         G = [0] * (num*num)
@@ -55,9 +55,9 @@ def weightedVertexCover(CG, num_of_agents):
             for k in range(j + 1, num):
                 G[j * num + k] = max(CG[indices[j] * num_of_agents + indices[k]],
                                      CG[indices[k] * num_of_agents + indices[j]])
-        if num > 8:  # solve by greedy matching
+        if num > 8:
             rst += greedyMatching(G, len(range_list))
-        else:  # solve by dynamic programming
+        else:
             x = [0] * num
             best_so_far = MAX_COST
             rst += DPForWMVC(x, 0, 0, G, range_list, best_so_far)
@@ -70,18 +70,16 @@ def DPForWMVC(x, i, sum_costs, CG, range_list, best_so_far):
     elif i == len(x):
         best_so_far = sum_costs
         return sum_costs
-    elif range_list[i] == 0: # vertex i does not have any edges.
+    elif range_list[i] == 0:
         rst = DPForWMVC(x, i + 1, sum_costs, CG, range_list, best_so_far)
         if rst < best_so_far.arg_value:
             best_so_far = rst
         return best_so_far
     cols = len(x)
-    
-    # find minimum cost for this vertex
     min_cost = 0
     for j in range(0, i):
-        if min_cost + x[j] < CG[j * cols + i]: # infeasible assignment
-            min_cost = CG[j * cols + i] - x[j] # cost should be at least CG[i][j] - x[j];
+        if min_cost + x[j] < CG[j * cols + i]:
+            min_cost = CG[j * cols + i] - x[j]
     best_cost = -1
     cost = min_cost
     while cost <= range_list[i]:
