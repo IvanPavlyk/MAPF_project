@@ -1,10 +1,12 @@
 import time as timer
 import heapq
+from cbs import CBSSolver
 from common_for_search import compute_heuristics,get_sum_of_cost
 from single_agent_planner import a_star
 from cbs_utilities import detect_collisions, disjoint_splitting, standard_splitting, paths_violate_constraint, doesContainCardinalConflict, areAgentsDependent, getBetterCollision
 from minimumVertexCover import minimumVertexCover, minimumVertexCoverHelper
-
+from minimumWeightedVertexCover import minimumWeightedVertexCover
+from results import Results
 
 class ICBSSolver(object):
     """The high-level search of CBS."""
@@ -33,12 +35,12 @@ class ICBSSolver(object):
 
     def push_node(self, node):
         heapq.heappush(self.open_list, (node['cost']+node['h_value'], len(node['collisions']), self.num_of_generated, node['h_value'], node))
-        print("Generate node {}".format(self.num_of_generated))
+        # print("Generate node {}".format(self.num_of_generated))
         self.num_of_generated += 1
 
     def pop_node(self):
         _, _, id, _, node = heapq.heappop(self.open_list)
-        print("Expand node {}".format(id))
+        # print("Expand node {}".format(id))
         self.num_of_expanded += 1
         return node
 
@@ -65,10 +67,41 @@ class ICBSSolver(object):
                 h = minimumVertexCoverHelper(DG, self.num_of_agents)
             else:
                 h = minimumVertexCover(DG, parent['h_value'], self.num_of_agents, num_of_DGedges)
+        elif heuristicType == 3: #WDG
+            WDG, isFound = self.buildEdgeWeightedDependancyGraph(collisions, HG, curr['mdds'], curr['constraints'])
+
+            if (isFound == False):
+                return False, 0
+
+            h = minimumWeightedVertexCover(WDG, self.num_of_agents)
+            print("computed h =" , h)
+
         if h < 0:
             return False, 0
+
         return True, max(h, curr['h_value'])
 
+    def solve2Agents(self, my_map, starts, goals, constraints = []):
+      
+        icbs =  ICBSSolver(my_map, starts, goals)
+      
+        time, expanded, generated, paths = icbs.find_solution(True, 2, constraints)
+       
+        if(paths == None):
+            print("start = ", starts)
+            print("ends= ", goals)
+            print("constraints: ", constraints)
+            return None 
+
+        cost1 = get_sum_of_cost(paths[0]) - 1
+        cost2 = get_sum_of_cost(paths[1]) - 1
+        cost = get_sum_of_cost(paths)       
+        print("cost1", cost1)
+        print("cost1", cost2)
+
+        print("Optimal conflict free paths", paths)
+        return cost1 + cost2
+    
     def buildCardinalConflictGraph(self, collisions, CG, mdds):
         num_of_CGedges = 0
         for collision in collisions:
@@ -102,11 +135,39 @@ class ICBSSolver(object):
                     num_of_DGedges += 1
         return DG, num_of_DGedges
 
-    def buildEdgeWeightedDependancyGraph(self, collisions, DG, mdds):
+    def buildEdgeWeightedDependancyGraph(self, collisions, DG, mdds, constraints):
+        
+        for collision in collisions:
+            a1 = collision['a1']
+            a2 = collision['a2']
+            mdd1 = mdds[a1]
+            mdd2 = mdds[a2]
+            if areAgentsDependent(mdd1, mdd2):
+                
+                if DG[a1 * self.num_of_agents + a2] == 0:
+                    optimal_path_a1 = a_star(self.my_map, self.starts[a1], self.goals[a1], self.heuristics[a1], a1, constraints)
+                    optimal_path_a2 = a_star(self.my_map, self.starts[a2], self.goals[a2], self.heuristics[a2], a2, constraints)
+                    
+                    if(optimal_path_a1 == None or optimal_path_a2 == None):
+                        continue
 
-        return DG
+                    conflict_free_cost = self.solve2Agents(self.my_map, [self.starts[a1], self.starts[a2]], [self.goals[a1], self.goals[a2]])
+                    
+                
+                    if(conflict_free_cost == None):
+                        continue
+                    
+                    value =  conflict_free_cost - (get_sum_of_cost(optimal_path_a1)- 1 + get_sum_of_cost(optimal_path_a2)-1) 
+                
+                    
+                    # print("optimal cost",get_sum_of_cost([optimal_path_a1, optimal_path_a2]) )
+                    DG[a1 * self.num_of_agents + a2] = (value)
+                    DG[a2 * self.num_of_agents + a1] = (value)
 
-    def find_solution(self, disjoint=False, h=0):
+        return DG, True
+
+
+    def find_solution(self, disjoint=False, h=0, initialConstraints = []):
         """ Finds paths for all agents from their start locations to their goal locations
 
         disjoint    - use disjoint splitting or not
@@ -119,20 +180,22 @@ class ICBSSolver(object):
                 'collisions': [],
                 'mdds': [],
                 'h_value': 0}
+        root['constraints'] = initialConstraints.copy()
+        print("root constraints", root['constraints'] )
         for i in range(self.num_of_agents):  # Find initial path for each agent
             path, mdd = a_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
                                i, root['constraints'], isMDD=True)
 
             if path is None:
-                raise BaseException('No solutions')
+                return None, None, None, None
             root['paths'].append(path)
             root['mdds'].append(mdd)
 
-        # print(root['mdds'].levels)
+      
         root['collisions'] = detect_collisions(root['paths'])
         root['cost'] = get_sum_of_cost(root['paths'])
         success, root['h_value'] = self.computeInformedHeuristics(root['collisions'], root, None, h)
-        print('root h_value: ', root['h_value'])
+        # print('root h_value: ', root['h_value'])
         
         if not success:
             print('h < 0')
@@ -151,7 +214,7 @@ class ICBSSolver(object):
 
             parent_node = self.pop_node()
             if (len(parent_node['collisions']) == 0):  # if no collisions return paths
-                self.print_results(parent_node)
+                # self.print_results(parent_node)
                 CPU_time = timer.time() - self.start_time
                 return CPU_time, self.num_of_expanded, self.num_of_generated, parent_node['paths']
 
@@ -224,8 +287,9 @@ class ICBSSolver(object):
                         print('h<0')
                     if (is_path_found == True):
                         self.push_node(Q)
+        print("No solutions")
+        return None, None, None, None
 
-        raise BaseException("No solutions")
 
     def print_results(self, node):
         print("\n Found a solution! \n")

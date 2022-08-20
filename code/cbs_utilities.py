@@ -1,6 +1,9 @@
 import random
 from common_for_search import get_location
-
+# from icbs import ICBSSolver
+# from run_experiments import Results
+# from common_for_search import get_sum_of_cost
+from common_for_search import get_location
 def detect_collision(path1, path2):
     ##############################
     # Return the first collision that occurs between two robot paths (or None if there is no collision)
@@ -143,9 +146,7 @@ def doesContainCardinalConflict(mdd1, mdd2):
                 # print("list1=",list1[0].location)
                 # print("list2=",list2[0].location)
                 if(list1[0].location == list2[0].location):
-                    # print("found cardinal conflict")
-                    # print("list1=", list1)
-                    # print("list2=",list2)
+                    
                     return True 
         return False
 
@@ -156,6 +157,8 @@ def areAgentsDependent(mdd1, mdd2):
         levels2 = mdd2.levels
 
         min_level = levels1 if len(levels1) <= len(levels2) else levels2 
+        max_level = levels1 if len(levels1) >= len(levels2) else levels2 
+        
         min_level_length =len(min_level)
 
         merged_levels = [[] for _ in range (min_level_length)]
@@ -172,6 +175,7 @@ def areAgentsDependent(mdd1, mdd2):
                     else: 
                         merged_levels[level].append([list1[loc_1], list2[loc_2]])
         
+    
      
         
         for pairs in merged_levels[-1]: #last level of merged_levels

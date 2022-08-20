@@ -17,8 +17,10 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints, isMDD=Fals
     optimal_len = -1
     closed_list = dict()
     h_value = h_values[start_loc]
-    
-    [negative_table, positive_table] = build_constraint_tables(constraints = constraints, agent = agent) 
+    negative_table = []
+    positive_table = []
+    if(constraints != None):
+        [negative_table, positive_table] = build_constraint_tables(constraints = constraints, agent = agent) 
 
     #added new key/value pair for time steps   
     root = {'loc': start_loc, 'g_val': 0, 'h_val': h_value, 'parent': None, 'time_step' : 0}   
@@ -35,7 +37,6 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints, isMDD=Fals
             if (len(negative_table) == 0):
                 final_path = get_path(curr) 
                 if (isMDD):
-                    # print("goal is at", goal_loc)
                     mdd = MDD(my_map, start_loc, h_values, len(final_path), positive_table, negative_table)
                     mdd.buildMDD()
                     return final_path, mdd
@@ -53,8 +54,7 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints, isMDD=Fals
                 if(curr_timestep >= time_count):
                     final_path = get_path(curr)
                     if(isMDD):
-                        # print("goal is at", goal_loc)
-                        # print("found path in a*", final_path)
+                      
                         
                         mdd = MDD(my_map, start_loc, h_values, len(final_path), positive_table, negative_table)
                         mdd.buildMDD()

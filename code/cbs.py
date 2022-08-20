@@ -3,8 +3,9 @@ import time as timer
 import heapq
 
 from queue import Queue
-from single_agent_planner import compute_heuristics, a_star, get_sum_of_cost
+from single_agent_planner import compute_heuristics, a_star
 from cbs_utilities import detect_collisions, disjoint_splitting, standard_splitting, paths_violate_constraint
+from single_agent_planner import get_sum_of_cost
 
 
 class CBSSolver(object):
@@ -77,7 +78,7 @@ class CBSSolver(object):
 
             parent_node = self.pop_node()
             if (len(parent_node['collisions']) == 0):  # if no collisions return paths
-                self.print_results(parent_node)
+                # self.print_results(parent_node)
                 CPU_time = timer.time() - self.start_time
                 return CPU_time, self.num_of_expanded, self.num_of_generated, parent_node['paths']
 
@@ -135,7 +136,7 @@ class CBSSolver(object):
                     if (is_path_found == True):
                         self.push_node(Q)
 
-        raise BaseException("No solutions")
+        return None, None, None, None
 
     def print_results(self, node):
         print("\n Found a solution! \n")
