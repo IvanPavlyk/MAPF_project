@@ -25,7 +25,8 @@ class ICBSSolver(object):
         self.num_of_generated = 0
         self.num_of_expanded = 0
         self.CPU_time = 0
-
+        self.h_values_cumulitive = 0
+        self.h_values_total = 0
         self.open_list = []
 
         # compute heuristics for the low-level search
@@ -74,10 +75,13 @@ class ICBSSolver(object):
                 return False, 0
 
             h = minimumWeightedVertexCover(WDG, self.num_of_agents)
-            print("computed h =" , h)
+          
 
         if h < 0:
             return False, 0
+
+        self.h_values_cumulitive += h
+        self.h_values_total += 1
 
         return True, max(h, curr['h_value'])
 
@@ -85,21 +89,15 @@ class ICBSSolver(object):
       
         icbs =  ICBSSolver(my_map, starts, goals)
       
-        time, expanded, generated, paths = icbs.find_solution(True, 2, constraints)
+        time, expanded, generated, paths, h = icbs.find_solution(True, 2, constraints)
        
         if(paths == None):
-            print("start = ", starts)
-            print("ends= ", goals)
-            print("constraints: ", constraints)
+          
             return None 
 
         cost1 = get_sum_of_cost(paths[0]) - 1
         cost2 = get_sum_of_cost(paths[1]) - 1
-        cost = get_sum_of_cost(paths)       
-        print("cost1", cost1)
-        print("cost1", cost2)
-
-        print("Optimal conflict free paths", paths)
+   
         return cost1 + cost2
     
     def buildCardinalConflictGraph(self, collisions, CG, mdds):
@@ -181,7 +179,6 @@ class ICBSSolver(object):
                 'mdds': [],
                 'h_value': 0}
         root['constraints'] = initialConstraints.copy()
-        print("root constraints", root['constraints'] )
         for i in range(self.num_of_agents):  # Find initial path for each agent
             path, mdd = a_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
                                i, root['constraints'], isMDD=True)
@@ -216,7 +213,8 @@ class ICBSSolver(object):
             if (len(parent_node['collisions']) == 0):  # if no collisions return paths
                 # self.print_results(parent_node)
                 CPU_time = timer.time() - self.start_time
-                return CPU_time, self.num_of_expanded, self.num_of_generated, parent_node['paths']
+
+                return CPU_time, self.num_of_expanded, self.num_of_generated, parent_node['paths'], (self.h_values_cumulitive*1.0)/self.h_values_total
 
             # TODO take the best collison to resolve
 
@@ -298,3 +296,4 @@ class ICBSSolver(object):
         print("Sum of costs:    {}".format(get_sum_of_cost(node['paths'])))
         print("Expanded nodes:  {}".format(self.num_of_expanded))
         print("Generated nodes: {}".format(self.num_of_generated))
+        print("Generated nodes: {}".format((self.h_values_cumulitive*1.0)/self.h_values_total))

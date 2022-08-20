@@ -106,11 +106,12 @@ if __name__ == '__main__':
                 time, expanded, generated, paths = cbs.find_solution(args.disjoint)
                 results.addValues(time, expanded, generated)
                 global_cost += get_sum_of_cost(paths)
+            
             elif args.solver == "ICBS":
                 print("***Run ICBS***")
                 icbs =  ICBSSolver(my_map, starts, goals)
-                time, expanded, generated, paths = icbs.find_solution(args.disjoint, args.h)
-                results.addValues(time, expanded, generated)
+                time, expanded, generated, paths, h_ave = icbs.find_solution(args.disjoint, args.h)
+                results.addValues(time, expanded, generated,h_ave)
                 global_cost += get_sum_of_cost(paths)        
             else:
                 raise RuntimeError("Unknown solver!")

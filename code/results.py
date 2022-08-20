@@ -7,11 +7,12 @@ class Results(object):
         self.cpu_time = 0
         self.expanded = 0
         self.generated = 0
-
-    def addValues(self, cpu_time, expanded, generated):
+        self.h_ave = 0
+    def addValues(self, cpu_time, expanded, generated, h_ave):
         self.cpu_time += cpu_time
         self.expanded += expanded
         self.generated += generated
+        self.h_ave += h_ave
 
     def printResults(self, num_of_experiments):
         print("Time: ", self.cpu_time)
@@ -21,3 +22,4 @@ class Results(object):
         print("Average time: ", self.cpu_time/num_of_experiments)
         print("Average expanded nodes: ", self.expanded/num_of_experiments)
         print("Average generated nodes: ", self.generated/num_of_experiments)
+        print("Average h-values: ", self.h_ave/num_of_experiments)
