@@ -3,7 +3,6 @@ def minimumVertexCoverHelper(CG, num_of_agents):
         rst = 0
         done = [False] * num_of_agents
         i = 0
-        print(CG)
         while i < num_of_agents:
             if done[i]:
                 i+=1

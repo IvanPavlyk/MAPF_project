@@ -103,8 +103,6 @@ if __name__ == '__main__':
                 print("***Run CBS***")
                 cbs = CBSSolver(my_map, starts, goals)
 
-                print("starts: ", starts)
-                print("goals: ", goals)
                 time, expanded, generated, paths = cbs.find_solution(args.disjoint)
                 results.addValues(time, expanded, generated)
                 global_cost += get_sum_of_cost(paths)

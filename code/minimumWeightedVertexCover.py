@@ -76,9 +76,10 @@ def DPForWMVC(x, i, sum_costs, CG, range_list, best_so_far):
             best_so_far = rst
         return best_so_far
     cols = len(x)
+    
     # find minimum cost for this vertex
     min_cost = 0
-    for j in range_list:
+    for j in range(0, i):
         if min_cost + x[j] < CG[j * cols + i]: # infeasible assignment
             min_cost = CG[j * cols + i] - x[j] # cost should be at least CG[i][j] - x[j];
     best_cost = -1

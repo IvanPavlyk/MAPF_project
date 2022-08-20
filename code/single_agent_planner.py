@@ -37,7 +37,6 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints, isMDD=Fals
             if (len(negative_table) == 0):
                 final_path = get_path(curr) 
                 if (isMDD):
-                    # print("goal is at", goal_loc)
                     mdd = MDD(my_map, start_loc, h_values, len(final_path), positive_table, negative_table)
                     mdd.buildMDD()
                     return final_path, mdd
@@ -55,8 +54,7 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints, isMDD=Fals
                 if(curr_timestep >= time_count):
                     final_path = get_path(curr)
                     if(isMDD):
-                        # print("goal is at", goal_loc)
-                        # print("found path in a*", final_path)
+                      
                         
                         mdd = MDD(my_map, start_loc, h_values, len(final_path), positive_table, negative_table)
                         mdd.buildMDD()
