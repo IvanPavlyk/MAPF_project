@@ -69,7 +69,7 @@ def minimumVertexCover(CG, old_mvc, cols, num_of_CGedges):
                 num_of_CGnodes += 1
                 break
     if num_of_CGnodes > 8:
-        return minimumVertexCoverHelper(CG)
+        return minimumVertexCoverHelper(CG, cols)
     else:
         if KVertexCover(CG, num_of_CGnodes, num_of_CGedges, old_mvc - 1, cols):
             rst = old_mvc - 1
